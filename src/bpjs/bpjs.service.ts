@@ -24,7 +24,7 @@ export class BpjsService {
         };
     }
 
-    generateHeaders(timestamp: string, service: 'antrean' | 'vclaim') {
+    generateHeaders(timestamp: string, service: 'antrean' | 'vclaim', contentType: string = 'application/json') {
         const { consId, secretKey, userKey } = this.getServiceConfig(service);
 
         if (!consId || !secretKey || !userKey) {
@@ -43,7 +43,7 @@ export class BpjsService {
             'X-timestamp': timestamp,
             'X-signature': signature,
             'user_key': userKey,
-            'Content-Type': 'application/json',
+            'Content-Type': contentType,
         };
     }
 
@@ -72,10 +72,10 @@ export class BpjsService {
         }
     }
 
-    private async makeRequest(service: 'antrean' | 'vclaim', method: 'get' | 'post', path: string, payload?: any) {
+    private async makeRequest(service: 'antrean' | 'vclaim', method: 'get' | 'post', path: string, payload?: any, contentType?: string) {
         const config = this.getServiceConfig(service);
         const timestamp = Math.floor(Date.now() / 1000).toString();
-        const headers = this.generateHeaders(timestamp, service);
+        const headers = this.generateHeaders(timestamp, service, contentType);
         const url = `${config.baseUrl}${path}`;
 
         try {
@@ -127,6 +127,8 @@ export class BpjsService {
         return this.makeRequest('antrean', 'get', `/ref/pasien/fp/identitas/${identitas}/noidentitas/${noidentitas}`);
     }
     async getListTask(data: any) { return this.makeRequest('antrean', 'post', '/antrean/getlisttask', data); }
+    async addAntrean(data: any) { return this.makeRequest('antrean', 'post', '/antrean/add', data); }
+    async updateWaktuAntrean(data: any) { return this.makeRequest('antrean', 'post', '/antrean/updatewaktu', data); }
     async getDashboardWaktuTungguTanggal(tanggal: string, waktu: string) {
         return this.makeRequest('antrean', 'get', `/dashboard/waktutunggu/tanggal/${tanggal}/waktu/${waktu}`);
     }
@@ -171,5 +173,9 @@ export class BpjsService {
 
     async getRujukanListByNoKartu(noKartu: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/RS/List/Peserta/${noKartu}`);
+    }
+
+    async insertSepV2(data: any) {
+        return this.makeRequest('vclaim', 'post', '/SEP/2.0/insert', data, 'Application/x-www-form-urlencoded');
     }
 }

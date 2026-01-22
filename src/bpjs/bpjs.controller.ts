@@ -62,6 +62,59 @@ export class BpjsController {
         return await this.bpjsService.getListTask(body);
     }
 
+    @Post('antrean/add')
+    @ApiOperation({ summary: 'Tambah Antrean RS' })
+    @ApiBody({
+        schema: {
+            example: {
+                kodebooking: '16032021A001',
+                jenispasien: 'JKN',
+                nomorkartu: '00012345678',
+                nik: '3212345678987654',
+                nohp: '085635228888',
+                kodepoli: 'ANA',
+                namapoli: 'Anak',
+                pasienbaru: 0,
+                norm: '123345',
+                tanggalperiksa: '2021-01-28',
+                kodedokter: 12345,
+                namadokter: 'Dr. Hendra',
+                jampraktek: '08:00-16:00',
+                jeniskunjungan: 1,
+                nomorreferensi: '0001R0040116A000001',
+                nomorantrean: 'A-12',
+                angkaantrean: 12,
+                estimasidilayani: 1615869169000,
+                sisakuotajkn: 5,
+                kuotajkn: 30,
+                sisakuotanonjkn: 5,
+                kuotanonjkn: 30,
+                keterangan: 'Peserta harap 30 menit lebih awal guna pencatatan administrasi.',
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Success response with decrypted antrean data' })
+    async addAntrean(@Body() body: any) {
+        return await this.bpjsService.addAntrean(body);
+    }
+
+    @Post('antrean/updatewaktu')
+    @ApiOperation({ summary: 'Update Waktu Antrean / Kirim Task ID' })
+    @ApiBody({
+        schema: {
+            example: {
+                kodebooking: '16032021A001',
+                taskid: 1,
+                waktu: 1616559330000,
+                jenisresep: 'Tidak ada/Racikan/Non racikan',
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Success response with decrypted update status' })
+    async updateWaktuAntrean(@Body() body: any) {
+        return await this.bpjsService.updateWaktuAntrean(body);
+    }
+
     @Get('dashboard/waktutunggu/tanggal/:tanggal/waktu/:waktu')
     @ApiOperation({ summary: 'Dashboard waktu per tanggal' })
     @ApiParam({ name: 'tanggal', description: 'Tanggal (YYYY-MM-DD)', example: '2021-04-16' })
@@ -198,5 +251,80 @@ export class BpjsController {
     @ApiResponse({ status: 200, description: 'Success response with decrypted rujukan list data' })
     async getRujukanListByNoKartu(@Param('nokartu') nokartu: string) {
         return await this.bpjsService.getRujukanListByNoKartu(nokartu);
+    }
+
+    @ApiTags('VClaim')
+    @Post('vclaim/sep/2.0/insert')
+    @ApiOperation({ summary: 'Insert SEP versi 2.0' })
+    @ApiBody({
+        schema: {
+            example: {
+                request: {
+                    t_sep: {
+                        noKartu: '0001105689835',
+                        tglSep: '2021-07-30',
+                        ppkPelayanan: '0301R011',
+                        jnsPelayanan: '1',
+                        klsRawat: {
+                            klsRawatHak: '2',
+                            klsRawatNaik: '1',
+                            pembiayaan: '1',
+                            penanggungJawab: 'Pribadi',
+                        },
+                        noMR: 'MR9835',
+                        rujukan: {
+                            asalRujukan: '2',
+                            tglRujukan: '2021-07-23',
+                            noRujukan: 'RJKMR9835001',
+                            ppkRujukan: '0301R011',
+                        },
+                        catatan: 'testinsert RI',
+                        diagAwal: 'E10',
+                        poli: {
+                            tujuan: '',
+                            eksekutif: '0',
+                        },
+                        cob: {
+                            cob: '0',
+                        },
+                        katarak: {
+                            katarak: '0',
+                        },
+                        jaminan: {
+                            lakaLantas: '0',
+                            noLP: '12345',
+                            penjamin: {
+                                tglKejadian: '',
+                                keterangan: '',
+                                suplesi: {
+                                    suplesi: '0',
+                                    noSepSuplesi: '',
+                                    lokasiLaka: {
+                                        kdPropinsi: '',
+                                        kdKabupaten: '',
+                                        kdKecamatan: '',
+                                    },
+                                },
+                            },
+                        },
+                        tujuanKunj: '0',
+                        flagProcedure: '',
+                        kdPenunjang: '',
+                        assesmentPel: '',
+                        skdp: {
+                            noSurat: '0301R0110721K000021',
+                            kodeDPJP: '31574',
+                        },
+                        dpjpLayan: '',
+                        noTelp: '081111111101',
+                        user: 'Coba Ws',
+                    },
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Success response with decrypted SEP data' })
+    async insertSepV2(@Body() body: any) {
+        return await this.bpjsService.insertSepV2(body);
     }
 }
