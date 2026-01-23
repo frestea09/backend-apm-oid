@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: backend-apm-oid
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
