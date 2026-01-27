@@ -2,6 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { RegistrasisDummy } from './entities/registrasis-dummy.entity';
 import * as crypto from 'crypto';
 import * as LZString from 'lz-string';
 
@@ -12,6 +15,8 @@ export class BpjsService {
     constructor(
         private readonly httpService: HttpService,
         private readonly configService: ConfigService,
+        @InjectRepository(RegistrasisDummy)
+        private readonly registrasisRepository: Repository<RegistrasisDummy>,
     ) { }
 
     private getServiceConfig(service: 'antrean' | 'vclaim') {
@@ -177,5 +182,34 @@ export class BpjsService {
 
     async insertSepV2(data: any) {
         return this.makeRequest('vclaim', 'post', '/SEP/2.0/insert', data, 'Application/x-www-form-urlencoded');
+    }
+
+    // Custom Local Database Methods
+    async findKodeBooking(identifier: string): Promise<string | null> {
+        const result = await this.registrasisRepository.findOne({
+            where: [
+                { norm: identifier },
+                { nik: identifier },
+                { nomorkartu: identifier },
+            ],
+            select: ['kodebooking'],
+        });
+        return result ? result.kodebooking : null;
+    }
+
+    async findAndGetBooking(identifier: string) {
+        const kodeBooking = await this.findKodeBooking(identifier);
+        if (!kodeBooking) {
+            // Jika tidak ditemukan di database lokal, kembalikan 404 atau pesan sesuai kebutuhan
+            // Disini kita asumsi kembalikan format error BPJS atau custom
+            return {
+                metaData: {
+                    code: 201,
+                    message: "Kode booking tidak ditemukan di database lokal untuk identifier tersebut.",
+                },
+                response: null
+            };
+        }
+        return this.getPendaftaranByKodeBooking(kodeBooking);
     }
 }

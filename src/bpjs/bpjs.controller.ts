@@ -157,6 +157,14 @@ export class BpjsController {
         return await this.bpjsService.getPendaftaranByKodeBooking(kodebooking);
     }
 
+    @Get('antrean/pendaftaran/cari-kodebooking/:identifier')
+    @ApiOperation({ summary: 'Mencari pendaftaran antrean berdasarkan No RM / NIK / No Kartu BPJS (Local DB Lookup)' })
+    @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu BPJS', example: '12345678' })
+    @ApiResponse({ status: 200, description: 'Success response with booking data found via local DB lookup' })
+    async cariPendaftaran(@Param('identifier') identifier: string) {
+        return await this.bpjsService.findAndGetBooking(identifier);
+    }
+
     @Get('antrean/pendaftaran/aktif')
     @ApiOperation({ summary: 'Melihat pendaftaran antrean belum dilayani' })
     @ApiResponse({ status: 200, description: 'Success response with decrypted active pendaftaran data' })
