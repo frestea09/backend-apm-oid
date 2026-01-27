@@ -189,10 +189,10 @@ export class BpjsService {
         try {
             const result = await this.registrasisRepository.findOne({
                 where: [
-                    { norm: identifier },
+                    { no_rm: identifier },
                     { nik: identifier },
                     { nomorkartu: identifier },
-                    { nomorantrean: identifier },
+                    { nomorantrian: identifier },
                 ],
                 select: ['kodebooking'],
             });

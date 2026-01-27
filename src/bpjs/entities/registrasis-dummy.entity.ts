@@ -8,8 +8,8 @@ export class RegistrasisDummy {
     @Column({ name: 'kodebooking' })
     kodebooking: string;
 
-    @Column({ name: 'norm' })
-    norm: string;
+    @Column({ name: 'no_rm' })
+    no_rm: string;
 
     @Column({ name: 'nomorkartu' })
     nomorkartu: string; // BPJS Card Number
@@ -20,8 +20,8 @@ export class RegistrasisDummy {
     @Column({ name: 'keterangan', nullable: true })
     keterangan: string;
 
-    @Column({ name: 'nomorantrean', nullable: true })
-    nomorantrean: string;
+    @Column({ name: 'nomorantrian', nullable: true })
+    nomorantrian: string;
 
     // Add other columns if necessary, but these are the ones relevant for search
 }
