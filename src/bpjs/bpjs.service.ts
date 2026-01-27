@@ -191,6 +191,7 @@ export class BpjsService {
                 { norm: identifier },
                 { nik: identifier },
                 { nomorkartu: identifier },
+                { nomorantrean: identifier },
             ],
             select: ['kodebooking'],
         });

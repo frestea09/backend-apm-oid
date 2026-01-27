@@ -20,5 +20,8 @@ export class RegistrasisDummy {
     @Column({ name: 'keterangan', nullable: true })
     keterangan: string;
 
+    @Column({ name: 'nomorantrean', nullable: true })
+    nomorantrean: string;
+
     // Add other columns if necessary, but these are the ones relevant for search
 }
