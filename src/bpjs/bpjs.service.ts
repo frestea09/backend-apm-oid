@@ -187,6 +187,7 @@ export class BpjsService {
     // Custom Local Database Methods
     async findKodeBooking(identifier: string): Promise<string | null> {
         try {
+            this.logger.log(`Searching for identifier: '${identifier}' in registrasis_dummy...`);
             const result = await this.registrasisRepository.findOne({
                 where: [
                     { no_rm: identifier },
@@ -196,12 +197,16 @@ export class BpjsService {
                 ],
                 select: ['kodebooking'],
             });
-            return result ? result.kodebooking : null;
+
+            if (result) {
+                this.logger.log(`Found booking: ${result.kodebooking} for identifier: ${identifier}`);
+                return result.kodebooking;
+            } else {
+                this.logger.warn(`No booking found for identifier: ${identifier}`);
+                return null;
+            }
         } catch (error) {
             this.logger.error(`Error finding booking in local DB for identifier ${identifier}: ${error.message}`, error.stack);
-            // Don't throw, return null or rethrow specific error depending on need.
-            // Returning null might mask the error as "not found", so maybe better to rethrow or return a special indicator?
-            // For now let's rethrow so the controller/user knows it's an error, not just "not found".
             throw error;
         }
     }
