@@ -186,31 +186,49 @@ export class BpjsService {
 
     // Custom Local Database Methods
     async findKodeBooking(identifier: string): Promise<string | null> {
-        const result = await this.registrasisRepository.findOne({
-            where: [
-                { norm: identifier },
-                { nik: identifier },
-                { nomorkartu: identifier },
-                { nomorantrean: identifier },
-            ],
-            select: ['kodebooking'],
-        });
-        return result ? result.kodebooking : null;
+        try {
+            const result = await this.registrasisRepository.findOne({
+                where: [
+                    { norm: identifier },
+                    { nik: identifier },
+                    { nomorkartu: identifier },
+                    { nomorantrean: identifier },
+                ],
+                select: ['kodebooking'],
+            });
+            return result ? result.kodebooking : null;
+        } catch (error) {
+            this.logger.error(`Error finding booking in local DB for identifier ${identifier}: ${error.message}`, error.stack);
+            // Don't throw, return null or rethrow specific error depending on need.
+            // Returning null might mask the error as "not found", so maybe better to rethrow or return a special indicator?
+            // For now let's rethrow so the controller/user knows it's an error, not just "not found".
+            throw error;
+        }
     }
 
     async findAndGetBooking(identifier: string) {
-        const kodeBooking = await this.findKodeBooking(identifier);
-        if (!kodeBooking) {
-            // Jika tidak ditemukan di database lokal, kembalikan 404 atau pesan sesuai kebutuhan
-            // Disini kita asumsi kembalikan format error BPJS atau custom
+        try {
+            const kodeBooking = await this.findKodeBooking(identifier);
+            if (!kodeBooking) {
+                return {
+                    metaData: {
+                        code: 201,
+                        message: "Kode booking tidak ditemukan di database lokal untuk identifier tersebut.",
+                    },
+                    response: null
+                };
+            }
+            return await this.getPendaftaranByKodeBooking(kodeBooking);
+        } catch (error) {
+            this.logger.error(`Error in findAndGetBooking for identifier ${identifier}: ${error.message}`, error.stack);
             return {
                 metaData: {
-                    code: 201,
-                    message: "Kode booking tidak ditemukan di database lokal untuk identifier tersebut.",
+                    code: 500,
+                    message: "Terjadi kesalahan internal saat mencari data (Cek Log Server).",
+                    details: error.message
                 },
                 response: null
             };
         }
-        return this.getPendaftaranByKodeBooking(kodeBooking);
     }
 }
