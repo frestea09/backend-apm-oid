@@ -187,22 +187,32 @@ export class BpjsService {
     // Custom Local Database Methods
     async findKodeBooking(identifier: string): Promise<string | null> {
         try {
-            this.logger.log(`Searching for identifier: '${identifier}' in registrasis_dummy...`);
+            // Get today's date in YYYY-MM-DD format
+            // Perbaikan: Menggunakan waktu lokal Indonesia (WIB) untuk akurasi tanggal
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
+
+            this.logger.log(`Searching for identifier: '${identifier}' in registrasis_dummy for date: ${today}...`);
+
             const result = await this.registrasisRepository.findOne({
                 where: [
-                    { no_rm: identifier },
-                    { nik: identifier },
-                    { nomorkartu: identifier },
-                    { nomorantrian: identifier },
+                    { no_rm: identifier, tglperiksa: today },
+                    { nik: identifier, tglperiksa: today },
+                    { nomorkartu: identifier, tglperiksa: today },
+                    { nomorantrian: identifier, tglperiksa: today },
                 ],
                 select: ['kodebooking'],
+                order: { id: 'DESC' } // Prioritaskan data yang paling baru masuk (jika ada duplikat hari ini)
             });
 
             if (result) {
                 this.logger.log(`Found booking: ${result.kodebooking} for identifier: ${identifier}`);
                 return result.kodebooking;
             } else {
-                this.logger.warn(`No booking found for identifier: ${identifier}`);
+                this.logger.warn(`No booking found for identifier: ${identifier} on date ${today}`);
                 return null;
             }
         } catch (error) {
