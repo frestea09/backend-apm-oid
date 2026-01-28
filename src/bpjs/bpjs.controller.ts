@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { BpjsService } from './bpjs.service';
 
 @ApiTags('BPJS')
@@ -160,9 +160,13 @@ export class BpjsController {
     @Get('antrean/pendaftaran/cari-kodebooking/:identifier')
     @ApiOperation({ summary: 'Mencari pendaftaran antrean berdasarkan No RM / NIK / No Kartu BPJS / Nomor Antrean (Local DB Lookup)' })
     @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu BPJS / Nomor Antrean', example: 'A-12' })
+    @ApiQuery({ name: 'tanggal', required: false, description: 'Tanggal Periksa (YYYY-MM-DD)', example: '2024-12-07' })
     @ApiResponse({ status: 200, description: 'Success response with booking data found via local DB lookup' })
-    async cariPendaftaran(@Param('identifier') identifier: string) {
-        return await this.bpjsService.findAndGetBooking(identifier);
+    async cariPendaftaran(
+        @Param('identifier') identifier: string,
+        @Query('tanggal') tanggal?: string,
+    ) {
+        return await this.bpjsService.findAndGetBooking(identifier, tanggal);
     }
 
     @Get('antrean/pendaftaran/aktif')

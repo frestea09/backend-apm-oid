@@ -185,34 +185,37 @@ export class BpjsService {
     }
 
     // Custom Local Database Methods
-    async findKodeBooking(identifier: string): Promise<string | null> {
+    async findKodeBooking(identifier: string, tanggal?: string): Promise<string | null> {
         try {
-            // Get today's date in YYYY-MM-DD format
-            // Perbaikan: Menggunakan waktu lokal Indonesia (WIB) untuk akurasi tanggal
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const today = `${year}-${month}-${day}`;
+            let targetDate = tanggal;
 
-            this.logger.log(`Searching for identifier: '${identifier}' in registrasis_dummy for date: ${today}...`);
+            if (!targetDate) {
+                // Get today's date in YYYY-MM-DD format (WIB)
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                targetDate = `${year}-${month}-${day}`;
+            }
+
+            this.logger.log(`Searching for identifier: '${identifier}' in registrasis_dummy for date: ${targetDate}...`);
 
             const result = await this.registrasisRepository.findOne({
                 where: [
-                    { no_rm: identifier, tglperiksa: today },
-                    { nik: identifier, tglperiksa: today },
-                    { nomorkartu: identifier, tglperiksa: today },
-                    { nomorantrian: identifier, tglperiksa: today },
+                    { no_rm: identifier, tglperiksa: targetDate },
+                    { nik: identifier, tglperiksa: targetDate },
+                    { nomorkartu: identifier, tglperiksa: targetDate },
+                    { nomorantrian: identifier, tglperiksa: targetDate },
                 ],
                 select: ['kodebooking'],
-                order: { id: 'DESC' } // Prioritaskan data yang paling baru masuk (jika ada duplikat hari ini)
+                order: { id: 'DESC' } // Prioritaskan data yang paling baru masuk
             });
 
             if (result) {
                 this.logger.log(`Found booking: ${result.kodebooking} for identifier: ${identifier}`);
                 return result.kodebooking;
             } else {
-                this.logger.warn(`No booking found for identifier: ${identifier} on date ${today}`);
+                this.logger.warn(`No booking found for identifier: ${identifier} on date ${targetDate}`);
                 return null;
             }
         } catch (error) {
@@ -221,14 +224,14 @@ export class BpjsService {
         }
     }
 
-    async findAndGetBooking(identifier: string) {
+    async findAndGetBooking(identifier: string, tanggal?: string) {
         try {
-            const kodeBooking = await this.findKodeBooking(identifier);
+            const kodeBooking = await this.findKodeBooking(identifier, tanggal);
             if (!kodeBooking) {
                 return {
                     metaData: {
                         code: 201,
-                        message: "Kode booking tidak ditemukan di database lokal untuk identifier tersebut.",
+                        message: `Kode booking tidak ditemukan di database lokal untuk identifier tersebut pada tanggal ${tanggal || 'hari ini'}.`,
                     },
                     response: null
                 };
