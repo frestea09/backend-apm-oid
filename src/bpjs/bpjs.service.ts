@@ -14,6 +14,7 @@ import { Pegawai } from './entities/pegawai.entity';
 import { HistoriStatus } from './entities/histori-status.entity';
 import { Historipengunjung } from './entities/histori-pengunjung.entity';
 import { HistorikunjunganIRJ } from './entities/histori-kunjungan-irj.entity';
+import { BpjsRencanaKontrol } from './entities/bpjs-rencana-kontrol.entity';
 import * as crypto from 'crypto';
 import * as LZString from 'lz-string';
 import { Like, DataSource } from 'typeorm';
@@ -46,6 +47,8 @@ export class BpjsService {
         private readonly historiPengunjungRepository: Repository<Historipengunjung>,
         @InjectRepository(HistorikunjunganIRJ)
         private readonly historiKunjunganIrjRepository: Repository<HistorikunjunganIRJ>,
+        @InjectRepository(BpjsRencanaKontrol)
+        private readonly bpjsRencanaKontrolRepository: Repository<BpjsRencanaKontrol>,
     ) { }
 
     private getServiceConfig(service: 'antrean' | 'vclaim') {
@@ -512,13 +515,20 @@ export class BpjsService {
                 return { metaData: { code: 201, message: `[KODE V3] Data pendaftaran untuk '${identifier}' tidak ditemukan di database untuk hari ini maupun tanggal lain.` } };
             }
 
-            // Fetch BPJS Details (Rujukan & Peserta) - Fail-safe
+            // Fetch supplementary data (Rujukan, Peserta, Rencana Kontrol) - Fail-safe
             let rujukan: any = null;
             let peserta: any = null;
+            let renkon: BpjsRencanaKontrol | null = null;
             let isRanap = false;
             let reqPoli = regDummy.kode_poli || '';
 
             try {
+                // 1. Check for Control Plan
+                if (regDummy.registrasi_id) {
+                    renkon = await this.bpjsRencanaKontrolRepository.findOneBy({ registrasi_id: regDummy.registrasi_id });
+                }
+
+                // 2. Fetch Referral (Rujukan)
                 if (regDummy.no_rujukan) {
                     const rujukanResponse = await this.getRujukanByNoRujukan(regDummy.no_rujukan);
                     if (rujukanResponse?.metaData?.code == 200) {
@@ -530,6 +540,7 @@ export class BpjsService {
                     }
                 }
 
+                // 3. Fetch Patient Info (Peserta)
                 const pesertaResponse = await this.getPesertaByNoKartu(regDummy.nomorkartu, today);
                 if (pesertaResponse?.metaData?.code == 200) {
                     peserta = pesertaResponse.response?.peserta;
@@ -538,11 +549,13 @@ export class BpjsService {
                 this.logger.warn(`Failed to fetch supplementary BPJS data: ${err.message}`);
             }
 
-            // Logic for default values
-            const tujuanKunj = '0'; // Default to Normal as requested
-            let assesmentPel = '';
+            // Logic for default values and overrides from BpjsRencanaKontrol
+            const tujuanKunj = renkon?.tujuanKunj || '0';
+            const flagProcedure = renkon?.flagProcedure || '';
+            const kdPenunjang = renkon?.kdPenunjang || '';
+            let assesmentPel = renkon?.assesmentPel || '';
 
-            if (rujukan && reqPoli && reqPoli !== rujukan.poliRujukan?.kode) {
+            if (!assesmentPel && tujuanKunj === '0' && rujukan && reqPoli && reqPoli !== rujukan.poliRujukan?.kode) {
                 assesmentPel = '2'; // Cross-poli detection
             }
 
@@ -562,13 +575,13 @@ export class BpjsService {
                         },
                         noMR: regDummy.no_rm,
                         rujukan: {
-                            asalRujukan: '1', // Default to Faskes 1
+                            asalRujukan: '1',
                             tglRujukan: rujukan?.tglKunjungan || today,
                             noRujukan: regDummy.no_rujukan || '',
                             ppkRujukan: rujukan?.provPerujuk?.kode || '',
                         },
                         catatan: '',
-                        diagAwal: rujukan?.diagnosa?.kode || '',
+                        diagAwal: renkon?.diagnosa_awal || rujukan?.diagnosa?.kode || '',
                         poli: {
                             tujuan: reqPoli,
                             eksekutif: '0',
@@ -597,11 +610,11 @@ export class BpjsService {
                             },
                         },
                         tujuanKunj: tujuanKunj,
-                        flagProcedure: '',
-                        kdPenunjang: '',
+                        flagProcedure: flagProcedure,
+                        kdPenunjang: kdPenunjang,
                         assesmentPel: assesmentPel,
                         skdp: {
-                            noSurat: '',
+                            noSurat: renkon?.no_surat_kontrol || '',
                             kodeDPJP: regDummy.kode_dokter || '',
                         },
                         dpjpLayan: isRanap ? '' : (regDummy.kode_dokter || ''),

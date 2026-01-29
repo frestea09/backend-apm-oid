@@ -14,6 +14,7 @@ import { Pegawai } from './entities/pegawai.entity';
 import { HistoriStatus } from './entities/histori-status.entity';
 import { Historipengunjung } from './entities/histori-pengunjung.entity';
 import { HistorikunjunganIRJ } from './entities/histori-kunjungan-irj.entity';
+import { BpjsRencanaKontrol } from './entities/bpjs-rencana-kontrol.entity';
 
 @Module({
     imports: [
@@ -29,6 +30,7 @@ import { HistorikunjunganIRJ } from './entities/histori-kunjungan-irj.entity';
             HistoriStatus,
             Historipengunjung,
             HistorikunjunganIRJ,
+            BpjsRencanaKontrol,
         ]),
     ],
     providers: [BpjsService],
