@@ -32,5 +32,12 @@ export class RegistrasisDummy {
     @Column({ name: 'registrasi_id', nullable: true })
     registrasi_id: number;
 
-    // Add other columns if necessary, but these are the ones relevant for search
+    @Column({ name: 'no_rujukan', nullable: true })
+    no_rujukan: string;
+
+    @Column({ name: 'no_hp', nullable: true })
+    no_hp: string;
+
+    @Column({ name: 'kode_poli', nullable: true })
+    kode_poli: string;
 }

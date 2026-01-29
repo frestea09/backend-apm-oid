@@ -459,4 +459,13 @@ export class BpjsController {
     async insertCekinSep(@Body() body: any) {
         return await this.bpjsService.createSepWithBusinessLogic(body);
     }
+
+    @ApiTags('VClaim')
+    @Get('vclaim/sep/generate-insert-v2/:identifier')
+    @ApiOperation({ summary: 'Generate Payload Request untuk POST VClaim 2.0 Insert SEP' })
+    @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu / Kode Booking', example: '22012026BRTSAR1' })
+    @ApiResponse({ status: 200, description: 'Success response with prepared JSON payload' })
+    async generateInsertV2(@Param('identifier') identifier: string) {
+        return await this.bpjsService.generateSepInsertV2Payload(identifier);
+    }
 }

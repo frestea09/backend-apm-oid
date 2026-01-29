@@ -456,4 +456,106 @@ export class BpjsService {
             };
         }
     }
+
+    async generateSepInsertV2Payload(identifier: string) {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const regDummy = await this.registrasisRepository.findOne({
+                where: [
+                    { kodebooking: identifier, tglperiksa: today },
+                    { no_rm: identifier, tglperiksa: today },
+                    { nik: identifier, tglperiksa: today },
+                    { nomorkartu: identifier, tglperiksa: today },
+                ],
+                order: { id: 'DESC' }
+            });
+
+            if (!regDummy) {
+                return { metaData: { code: 201, message: 'Data pendaftaran tidak ditemukan untuk hari ini' } };
+            }
+
+            // Fetch BPJS Details (Rujukan & Peserta)
+            const rujukanResponse = await this.getRujukanByNoRujukan(regDummy.no_rujukan);
+            const pesertaResponse = await this.getPesertaByNoKartu(regDummy.nomorkartu, today);
+
+            if (rujukanResponse.metaData.code != 200) {
+                return { metaData: { code: 201, message: `Gagal ambil data rujukan: ${rujukanResponse.metaData.message}` } };
+            }
+
+            const rujukan = rujukanResponse.response.rujukan;
+            const peserta = pesertaResponse.response?.peserta;
+
+            // Construct VClaim 2.0 Payload
+            const payload = {
+                request: {
+                    t_sep: {
+                        noKartu: regDummy.nomorkartu,
+                        tglSep: today,
+                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN'),
+                        jnsPelayanan: rujukan.pelayanan.kode, // 2 for Rajal, 1 for Ranap
+                        klsRawat: {
+                            klsRawatHak: peserta?.hakKelas.kode || rujukan.peserta.hakKelas.kode,
+                            klsRawatNaik: '',
+                            pembiayaan: '',
+                            penanggungJawab: '',
+                        },
+                        noMR: regDummy.no_rm,
+                        rujukan: {
+                            asalRujukan: rujukanResponse._debug?.path?.includes('RS') ? '2' : '1', // Simplified logic
+                            tglRujukan: rujukan.tglKunjungan,
+                            noRujukan: regDummy.no_rujukan,
+                            ppkRujukan: rujukan.provPerujuk.kode,
+                        },
+                        catatan: '',
+                        diagAwal: rujukan.diagnosa.kode,
+                        poli: {
+                            tujuan: regDummy.kode_poli || rujukan.poliRujukan.kode,
+                            eksekutif: '0',
+                        },
+                        cob: {
+                            cob: '0',
+                        },
+                        katarak: {
+                            katarak: '0',
+                        },
+                        jaminan: {
+                            lakaLantas: '0',
+                            penjamin: {
+                                tglKejadian: '',
+                                keterangan: '',
+                                suplesi: {
+                                    suplesi: '0',
+                                    noSepSuplesi: '',
+                                    lokasiLaka: {
+                                        kdPropinsi: '',
+                                        kdKabupaten: '',
+                                        kdKecamatan: '',
+                                    },
+                                },
+                            },
+                        },
+                        tujuanKunj: '0',
+                        flagProcedure: '',
+                        kdPenunjang: '',
+                        assesmentPel: '',
+                        skdp: {
+                            noSurat: '',
+                            kodeDPJP: '',
+                        },
+                        dpjpLayan: '',
+                        noTelp: regDummy.no_hp || peserta?.noTelepon || '',
+                        user: 'APM-OID',
+                    },
+                },
+            };
+
+            return {
+                metaData: { code: 200, message: 'OK' },
+                response: payload
+            };
+        } catch (error) {
+            this.logger.error(`Error generating SEP payload: ${error.message}`, error.stack);
+            return { metaData: { code: 500, message: `Error generating payload: ${error.message}` } };
+        }
+    }
 }
