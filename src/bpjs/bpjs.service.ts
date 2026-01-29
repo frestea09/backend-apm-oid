@@ -522,6 +522,14 @@ export class BpjsService {
 
             const rujukan = rujukanResponse.response.rujukan;
             const peserta = pesertaResponse.response?.peserta;
+            const isRanap = rujukan.pelayanan.kode === '1';
+            const reqPoli = regDummy.kode_poli || rujukan.poliRujukan.kode;
+
+            // Logic for assesmentPel: filled if tujuanKunj = "0" and requested poli != referral poli
+            let assesmentPel = '';
+            if (reqPoli !== rujukan.poliRujukan.kode) {
+                assesmentPel = '2'; // BPJS usually requires this for cross-poli
+            }
 
             // Construct VClaim 2.0 Payload
             const payload = {
@@ -547,7 +555,7 @@ export class BpjsService {
                         catatan: '',
                         diagAwal: rujukan.diagnosa.kode,
                         poli: {
-                            tujuan: regDummy.kode_poli || rujukan.poliRujukan.kode,
+                            tujuan: reqPoli,
                             eksekutif: regDummy.polieksekutif || '0',
                         },
                         cob: {
@@ -573,15 +581,15 @@ export class BpjsService {
                                 },
                             },
                         },
-                        tujuanKunj: regDummy.jenisrequest == '1' ? '0' : '2', // Logic simplified: 0 Normal, 2 Konsul
-                        flagProcedure: '',
-                        kdPenunjang: '',
-                        assesmentPel: '',
+                        tujuanKunj: '0', // Default to 0 (Normal)
+                        flagProcedure: '', // Empty if tujuanKunj = "0"
+                        kdPenunjang: '', // Empty if tujuanKunj = "0"
+                        assesmentPel: assesmentPel,
                         skdp: {
-                            noSurat: regDummy.no_rujukan || '',
-                            kodeDPJP: '',
+                            noSurat: '', // Blank for Normal arrivals
+                            kodeDPJP: regDummy.kode_dokter || '',
                         },
-                        dpjpLayan: '',
+                        dpjpLayan: isRanap ? '' : (regDummy.kode_dokter || ''), // Empty if RANAP
                         noTelp: regDummy.no_hp || peserta?.noTelepon || '',
                         user: 'APM-OID',
                     },

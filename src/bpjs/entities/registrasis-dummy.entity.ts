@@ -46,4 +46,7 @@ export class RegistrasisDummy {
 
     @Column({ name: 'jenisrequest', nullable: true })
     jenisrequest: string;
+
+    @Column({ name: 'kode_dokter', nullable: true })
+    kode_dokter: string;
 }
