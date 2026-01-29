@@ -459,8 +459,13 @@ export class BpjsService {
 
     async generateSepInsertV2Payload(identifier: string) {
         try {
-            const today = new Date().toISOString().split('T')[0];
-            const regDummy = await this.registrasisRepository.findOne({
+            // Use Local Date (WIB/Server Time)
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+            this.logger.log(`Generating SEP Payload for identifier: ${identifier} on date: ${today}`);
+
+            let regDummy = await this.registrasisRepository.findOne({
                 where: [
                     { kodebooking: identifier, tglperiksa: today },
                     { no_rm: identifier, tglperiksa: today },
@@ -471,7 +476,27 @@ export class BpjsService {
             });
 
             if (!regDummy) {
-                return { metaData: { code: 201, message: 'Data pendaftaran tidak ditemukan untuk hari ini' } };
+                // Diagnostic: Check if data exists for ANY other date
+                const anyRecord = await this.registrasisRepository.findOne({
+                    where: [
+                        { kodebooking: identifier },
+                        { no_rm: identifier },
+                        { nik: identifier },
+                        { nomorkartu: identifier },
+                    ],
+                    order: { tglperiksa: 'DESC', id: 'DESC' }
+                });
+
+                if (anyRecord) {
+                    return {
+                        metaData: {
+                            code: 201,
+                            message: `Data ditemukan untuk tanggal ${anyRecord.tglperiksa}, namun pencarian dibatasi untuk hari ini (${today}).`
+                        }
+                    };
+                }
+
+                return { metaData: { code: 201, message: `Data pendaftaran untuk '${identifier}' tidak ditemukan di database lokal untuk hari ini (${today})` } };
             }
 
             // Fetch BPJS Details (Rujukan & Peserta)
