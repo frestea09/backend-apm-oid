@@ -582,14 +582,14 @@ export class BpjsService {
                             },
                         },
                         tujuanKunj: '0', // Default to 0 (Normal)
-                        flagProcedure: '', // Empty if tujuanKunj = "0"
-                        kdPenunjang: '', // Empty if tujuanKunj = "0"
-                        assesmentPel: assesmentPel,
+                        flagProcedure: null, // Should be null if tujuanKunj = "0"
+                        kdPenunjang: null, // Should be null if tujuanKunj = "0"
+                        assesmentPel: assesmentPel || null,
                         skdp: {
-                            noSurat: '', // Blank for Normal arrivals
-                            kodeDPJP: regDummy.kode_dokter || '',
+                            noSurat: null, // Should be null for Normal arrivals
+                            kodeDPJP: regDummy.kode_dokter || null,
                         },
-                        dpjpLayan: isRanap ? '' : (regDummy.kode_dokter || ''), // Empty if RANAP
+                        dpjpLayan: isRanap ? null : (regDummy.kode_dokter || null),
                         noTelp: regDummy.no_hp || peserta?.noTelepon || '',
                         user: 'APM-OID',
                     },
