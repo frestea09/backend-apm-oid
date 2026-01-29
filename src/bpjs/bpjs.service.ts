@@ -219,7 +219,7 @@ export class BpjsService {
     }
 
     async getLastSepByNoRujukan(noRujukan: string) {
-        return this.makeRequest('vclaim', 'get', `/Rujukan/lastsep/norujukan/${noRujukan}`);
+        return this.makeRequest('vclaim', 'get', `/Rujukan/LastSEP/NoRujukan/${noRujukan}`);
     }
 
     async getRujukanByNoRujukan(noRujukan: string) {
