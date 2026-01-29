@@ -465,7 +465,8 @@ export class BpjsService {
 
             this.logger.log(`Generating SEP Payload for identifier: ${identifier} on date: ${today}`);
 
-            let regDummy = await this.registrasisRepository.findOne({
+            // 1. Search for records today
+            const recordsToday = await this.registrasisRepository.find({
                 where: [
                     { kodebooking: identifier, tglperiksa: today },
                     { no_rm: identifier, tglperiksa: today },
@@ -474,6 +475,18 @@ export class BpjsService {
                 ],
                 order: { id: 'DESC' }
             });
+
+            if (recordsToday.length > 1) {
+                return {
+                    metaData: {
+                        code: 201,
+                        message: `[KODE V3] Ditemukan ${recordsToday.length} pendaftaran untuk '${identifier}' hari ini. Silakan gunakan Kode Booking agar lebih spesifik.`,
+                        _found: recordsToday.map(r => ({ kodebooking: r.kodebooking, poli: r.kode_poli }))
+                    }
+                };
+            }
+
+            let regDummy = recordsToday[0];
 
             if (!regDummy) {
                 // Diagnostic: Check if data exists for ANY other date
@@ -491,12 +504,12 @@ export class BpjsService {
                     return {
                         metaData: {
                             code: 201,
-                            message: `Data ditemukan untuk tanggal ${anyRecord.tglperiksa}, namun pencarian dibatasi untuk hari ini (${today}).`
+                            message: `[KODE V3] Data ditemukan untuk tanggal ${anyRecord.tglperiksa}, namun pencarian dibatasi untuk hari ini (${today}).`
                         }
                     };
                 }
 
-                return { metaData: { code: 201, message: `Data pendaftaran untuk '${identifier}' tidak ditemukan di database lokal untuk hari ini (${today})` } };
+                return { metaData: { code: 201, message: `[KODE V3] Data pendaftaran untuk '${identifier}' tidak ditemukan di database untuk hari ini maupun tanggal lain.` } };
             }
 
             // Fetch BPJS Details (Rujukan & Peserta)
