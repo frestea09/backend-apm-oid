@@ -512,24 +512,37 @@ export class BpjsService {
                 return { metaData: { code: 201, message: `[KODE V3] Data pendaftaran untuk '${identifier}' tidak ditemukan di database untuk hari ini maupun tanggal lain.` } };
             }
 
-            // Fetch BPJS Details (Rujukan & Peserta)
-            const rujukanResponse = await this.getRujukanByNoRujukan(regDummy.no_rujukan);
-            const pesertaResponse = await this.getPesertaByNoKartu(regDummy.nomorkartu, today);
+            // Fetch BPJS Details (Rujukan & Peserta) - Fail-safe
+            let rujukan: any = null;
+            let peserta: any = null;
+            let isRanap = false;
+            let reqPoli = regDummy.kode_poli || '';
 
-            if (rujukanResponse.metaData.code != 200) {
-                return { metaData: { code: 201, message: `Gagal ambil data rujukan: ${rujukanResponse.metaData.message}` } };
+            try {
+                if (regDummy.no_rujukan) {
+                    const rujukanResponse = await this.getRujukanByNoRujukan(regDummy.no_rujukan);
+                    if (rujukanResponse?.metaData?.code == 200) {
+                        rujukan = rujukanResponse.response?.rujukan;
+                        if (rujukan) {
+                            isRanap = rujukan.pelayanan?.kode === '1';
+                            if (!reqPoli) reqPoli = rujukan.poliRujukan?.kode;
+                        }
+                    }
+                }
+
+                const pesertaResponse = await this.getPesertaByNoKartu(regDummy.nomorkartu, today);
+                if (pesertaResponse?.metaData?.code == 200) {
+                    peserta = pesertaResponse.response?.peserta;
+                }
+            } catch (err) {
+                this.logger.warn(`Failed to fetch supplementary BPJS data: ${err.message}`);
             }
 
-            const rujukan = rujukanResponse.response.rujukan;
-            const peserta = pesertaResponse.response?.peserta;
-            const isRanap = rujukan.pelayanan.kode === '1';
-            const reqPoli = regDummy.kode_poli || rujukan.poliRujukan.kode;
+            // Logic for default values
+            const tujuanKunj = '0'; // Default to Normal as requested
+            let assesmentPel = '';
 
-            // Logic for default values if not provided in DB
-            const tujuanKunj = regDummy.tujuan_kunj || '0';
-            let assesmentPel = regDummy.assesment_pel || '';
-
-            if (!regDummy.assesment_pel && tujuanKunj === '0' && reqPoli !== rujukan.poliRujukan.kode) {
+            if (rujukan && reqPoli && reqPoli !== rujukan.poliRujukan?.kode) {
                 assesmentPel = '2'; // Cross-poli detection
             }
 
@@ -540,25 +553,25 @@ export class BpjsService {
                         noKartu: regDummy.nomorkartu,
                         tglSep: today,
                         ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN'),
-                        jnsPelayanan: rujukan.pelayanan.kode, // 2 for Rajal, 1 for Ranap
+                        jnsPelayanan: isRanap ? '1' : '2',
                         klsRawat: {
-                            klsRawatHak: peserta?.hakKelas.kode || rujukan.peserta.hakKelas.kode,
+                            klsRawatHak: peserta?.hakKelas?.kode || rujukan?.peserta?.hakKelas?.kode || '',
                             klsRawatNaik: '',
                             pembiayaan: '',
                             penanggungJawab: '',
                         },
                         noMR: regDummy.no_rm,
                         rujukan: {
-                            asalRujukan: rujukanResponse._debug?.path?.toLowerCase().includes('rs') ? '2' : '1',
-                            tglRujukan: rujukan.tglKunjungan,
-                            noRujukan: regDummy.no_rujukan,
-                            ppkRujukan: rujukan.provPerujuk.kode,
+                            asalRujukan: '1', // Default to Faskes 1
+                            tglRujukan: rujukan?.tglKunjungan || today,
+                            noRujukan: regDummy.no_rujukan || '',
+                            ppkRujukan: rujukan?.provPerujuk?.kode || '',
                         },
                         catatan: '',
-                        diagAwal: rujukan.diagnosa.kode,
+                        diagAwal: rujukan?.diagnosa?.kode || '',
                         poli: {
                             tujuan: reqPoli,
-                            eksekutif: regDummy.polieksekutif || '0',
+                            eksekutif: '0',
                         },
                         cob: {
                             cob: '0',
@@ -584,11 +597,11 @@ export class BpjsService {
                             },
                         },
                         tujuanKunj: tujuanKunj,
-                        flagProcedure: regDummy.flag_procedure || '',
-                        kdPenunjang: regDummy.kd_penunjang || '',
+                        flagProcedure: '',
+                        kdPenunjang: '',
                         assesmentPel: assesmentPel,
                         skdp: {
-                            noSurat: regDummy.no_surat || '',
+                            noSurat: '',
                             kodeDPJP: regDummy.kode_dokter || '',
                         },
                         dpjpLayan: isRanap ? '' : (regDummy.kode_dokter || ''),
