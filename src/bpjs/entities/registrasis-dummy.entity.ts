@@ -26,5 +26,11 @@ export class RegistrasisDummy {
     @Column({ name: 'tglperiksa', type: 'date', nullable: true })
     tglperiksa: string;
 
+    @Column({ name: 'status', nullable: true })
+    status: string;
+
+    @Column({ name: 'registrasi_id', nullable: true })
+    registrasi_id: number;
+
     // Add other columns if necessary, but these are the ones relevant for search
 }

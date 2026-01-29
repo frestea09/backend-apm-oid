@@ -266,6 +266,71 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Post('vclaim/sep/insert')
+    @ApiOperation({ summary: 'Insert SEP versi 1.1' })
+    @ApiBody({
+        schema: {
+            example: {
+                request: {
+                    t_sep: {
+                        noKartu: '0001105689835',
+                        tglSep: '2021-07-30',
+                        ppkPelayanan: '0301R011',
+                        jnsPelayanan: '1',
+                        klsRawat: '2',
+                        noMR: 'MR9835',
+                        rujukan: {
+                            asalRujukan: '2',
+                            tglRujukan: '2021-07-23',
+                            noRujukan: 'RJKMR9835001',
+                            ppkRujukan: '0301R011',
+                        },
+                        catatan: 'testinsert RI',
+                        diagAwal: 'E10',
+                        poli: {
+                            tujuan: '',
+                            eksekutif: '0',
+                        },
+                        cob: {
+                            cob: '0',
+                        },
+                        katarak: {
+                            katarak: '0',
+                        },
+                        jaminan: {
+                            lakaLantas: '0',
+                            noLP: '12345',
+                            penjamin: {
+                                tglKejadian: '',
+                                keterangan: '',
+                                suplesi: {
+                                    suplesi: '0',
+                                    noSepSuplesi: '',
+                                    lokasiLaka: {
+                                        kdPropinsi: '',
+                                        kdKabupaten: '',
+                                        kdKecamatan: '',
+                                    },
+                                },
+                            },
+                        },
+                        skdp: {
+                            noSurat: '0301R0110721K000021',
+                            kodeDPJP: '31574',
+                        },
+                        noTelp: '081111111101',
+                        user: 'Coba Ws',
+                    },
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Success response with decrypted SEP data' })
+    async insertSep(@Body() body: any) {
+        return await this.bpjsService.insertSep(body);
+    }
+
+    @ApiTags('VClaim')
     @Post('vclaim/sep/2.0/insert')
     @ApiOperation({ summary: 'Insert SEP versi 2.0' })
     @ApiBody({
@@ -338,5 +403,60 @@ export class BpjsController {
     @ApiResponse({ status: 201, description: 'Success response with decrypted SEP data' })
     async insertSepV2(@Body() body: any) {
         return await this.bpjsService.insertSepV2(body);
+    }
+
+    @ApiTags('VClaim')
+    @Post('vclaim/sep/cekin-insert')
+    @ApiOperation({ summary: 'Insert SEP dengan Business Logic SIMRS (Update Database Lokal)' })
+    @ApiBody({
+        schema: {
+            example: {
+                id_reg_dum: 1,
+                dokter_id: '123_Dr. Example_08:00-14:00_ANA',
+                vclaim_data: {
+                    request: {
+                        t_sep: {
+                            noKartu: '0001105689835',
+                            tglSep: '2021-07-30',
+                            ppkPelayanan: '0301R011',
+                            jnsPelayanan: '1',
+                            klsRawat: {
+                                klsRawatHak: '2',
+                            },
+                            rujukan: {
+                                asalRujukan: '2',
+                                tglRujukan: '2021-07-23',
+                                noRujukan: 'RJKMR9835001',
+                                ppkRujukan: '0301R011',
+                            },
+                            catatan: 'testinsert RI',
+                            diagAwal: 'E10',
+                            poli: {
+                                tujuan: 'ANA',
+                                eksekutif: '0',
+                            },
+                            cob: {
+                                cob: '0',
+                            },
+                            katarak: {
+                                katarak: '0',
+                            },
+                        },
+                    },
+                },
+                nama: 'JOHN DOE',
+                nik: '320123456789',
+                tanggallahir: '1990-01-01',
+                jeniskelamin: 'L',
+                alamat: 'Jl. Contoh No. 1',
+                nohp: '08123456789',
+                nomorkartu: '0001105689835',
+                no_rujukan: '1234R567',
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Success response with Decrypted SEP data and local DB info' })
+    async insertCekinSep(@Body() body: any) {
+        return await this.bpjsService.createSepWithBusinessLogic(body);
     }
 }
