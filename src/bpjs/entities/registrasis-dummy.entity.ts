@@ -49,4 +49,19 @@ export class RegistrasisDummy {
 
     @Column({ name: 'kode_dokter', nullable: true })
     kode_dokter: string;
+
+    @Column({ name: 'tujuan_kunj', nullable: true })
+    tujuan_kunj: string;
+
+    @Column({ name: 'flag_procedure', nullable: true })
+    flag_procedure: string;
+
+    @Column({ name: 'kd_penunjang', nullable: true })
+    kd_penunjang: string;
+
+    @Column({ name: 'assesment_pel', nullable: true })
+    assesment_pel: string;
+
+    @Column({ name: 'no_surat', nullable: true })
+    no_surat: string;
 }

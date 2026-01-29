@@ -525,10 +525,12 @@ export class BpjsService {
             const isRanap = rujukan.pelayanan.kode === '1';
             const reqPoli = regDummy.kode_poli || rujukan.poliRujukan.kode;
 
-            // Logic for assesmentPel: filled if tujuanKunj = "0" and requested poli != referral poli
-            let assesmentPel = '';
-            if (reqPoli !== rujukan.poliRujukan.kode) {
-                assesmentPel = '2'; // BPJS usually requires this for cross-poli
+            // Logic for default values if not provided in DB
+            const tujuanKunj = regDummy.tujuan_kunj || '0';
+            let assesmentPel = regDummy.assesment_pel || '';
+
+            if (!regDummy.assesment_pel && tujuanKunj === '0' && reqPoli !== rujukan.poliRujukan.kode) {
+                assesmentPel = '2'; // Cross-poli detection
             }
 
             // Construct VClaim 2.0 Payload
@@ -581,15 +583,15 @@ export class BpjsService {
                                 },
                             },
                         },
-                        tujuanKunj: '0', // Default to 0 (Normal)
-                        flagProcedure: null, // Should be null if tujuanKunj = "0"
-                        kdPenunjang: null, // Should be null if tujuanKunj = "0"
-                        assesmentPel: assesmentPel || null,
+                        tujuanKunj: tujuanKunj,
+                        flagProcedure: regDummy.flag_procedure || '',
+                        kdPenunjang: regDummy.kd_penunjang || '',
+                        assesmentPel: assesmentPel,
                         skdp: {
-                            noSurat: null, // Should be null for Normal arrivals
-                            kodeDPJP: regDummy.kode_dokter || null,
+                            noSurat: regDummy.no_surat || '',
+                            kodeDPJP: regDummy.kode_dokter || '',
                         },
-                        dpjpLayan: isRanap ? null : (regDummy.kode_dokter || null),
+                        dpjpLayan: isRanap ? '' : (regDummy.kode_dokter || ''),
                         noTelp: regDummy.no_hp || peserta?.noTelepon || '',
                         user: 'APM-OID',
                     },
