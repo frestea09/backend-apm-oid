@@ -40,4 +40,10 @@ export class RegistrasisDummy {
 
     @Column({ name: 'kode_poli', nullable: true })
     kode_poli: string;
+
+    @Column({ name: 'polieksekutif', nullable: true })
+    polieksekutif: string;
+
+    @Column({ name: 'jenisrequest', nullable: true })
+    jenisrequest: string;
 }

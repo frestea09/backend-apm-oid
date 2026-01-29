@@ -539,7 +539,7 @@ export class BpjsService {
                         },
                         noMR: regDummy.no_rm,
                         rujukan: {
-                            asalRujukan: rujukanResponse._debug?.path?.includes('RS') ? '2' : '1', // Simplified logic
+                            asalRujukan: rujukanResponse._debug?.path?.toLowerCase().includes('rs') ? '2' : '1',
                             tglRujukan: rujukan.tglKunjungan,
                             noRujukan: regDummy.no_rujukan,
                             ppkRujukan: rujukan.provPerujuk.kode,
@@ -548,7 +548,7 @@ export class BpjsService {
                         diagAwal: rujukan.diagnosa.kode,
                         poli: {
                             tujuan: regDummy.kode_poli || rujukan.poliRujukan.kode,
-                            eksekutif: '0',
+                            eksekutif: regDummy.polieksekutif || '0',
                         },
                         cob: {
                             cob: '0',
@@ -558,6 +558,7 @@ export class BpjsService {
                         },
                         jaminan: {
                             lakaLantas: '0',
+                            noLP: '',
                             penjamin: {
                                 tglKejadian: '',
                                 keterangan: '',
@@ -572,12 +573,12 @@ export class BpjsService {
                                 },
                             },
                         },
-                        tujuanKunj: '0',
+                        tujuanKunj: regDummy.jenisrequest == '1' ? '0' : '2', // Logic simplified: 0 Normal, 2 Konsul
                         flagProcedure: '',
                         kdPenunjang: '',
                         assesmentPel: '',
                         skdp: {
-                            noSurat: '',
+                            noSurat: regDummy.no_rujukan || '',
                             kodeDPJP: '',
                         },
                         dpjpLayan: '',
