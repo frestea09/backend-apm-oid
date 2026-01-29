@@ -440,8 +440,8 @@ export class BpjsService {
             if (!kodeBooking) {
                 return {
                     metaData: {
-                        code: 201,
-                        message: `Kode booking tidak ditemukan di database lokal untuk identifier tersebut pada tanggal ${tanggal || 'hari ini'}.`,
+                        code: 404,
+                        message: `Data tidak ditemukan di database lokal (${identifier}).`,
                     },
                     response: null
                 };
@@ -506,13 +506,13 @@ export class BpjsService {
                 if (anyRecord) {
                     return {
                         metaData: {
-                            code: 201,
-                            message: `[KODE V3] Data ditemukan untuk tanggal ${anyRecord.tglperiksa}, namun pencarian dibatasi untuk hari ini (${today}).`
+                            code: 404,
+                            message: `Pendaftaran ditemukan pada ${anyRecord.tglperiksa}, mohon gunakan tanggal yang sesuai.`
                         }
                     };
                 }
 
-                return { metaData: { code: 201, message: `[KODE V3] Data pendaftaran untuk '${identifier}' tidak ditemukan di database untuk hari ini maupun tanggal lain.` } };
+                return { metaData: { code: 404, message: `Pendaftaran tidak ditemukan untuk '${identifier}' pada database lokal.` } };
             }
 
             // Fetch supplementary data (Rujukan, Peserta, Rencana Kontrol) - Fail-safe
