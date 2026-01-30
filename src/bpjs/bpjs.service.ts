@@ -250,6 +250,86 @@ export class BpjsService {
         return this.makeRequest('pcare', 'get', `/kunjungan/peserta/${noKartu}`);
     }
 
+    async checkRujukanExpiry(noRujukan: string, targetDate?: string) {
+        try {
+            const tglPeriksa = targetDate || new Date().toISOString().split('T')[0];
+
+            // Try to add rujukan to antrean to check if it's expired
+            // This mimics rsud-otista's validation approach
+            const timestamp = Math.floor(Date.now() / 1000).toString();
+            const headers = this.generateHeaders(timestamp, 'antrean');
+            const { baseUrl } = this.getServiceConfig('antrean');
+
+            // Create a minimal antrean payload to test rujukan validity
+            const payload = {
+                kodebooking: `TEST${Date.now()}`,
+                jenispasien: "JKN",
+                nomorkartu: "0000000000000", // Dummy
+                nik: "0000000000000000",
+                nohp: "08123456789",
+                kodepoli: "001",
+                namapoli: "Poli Umum",
+                pasienbaru: 0,
+                norm: "000000",
+                tanggalperiksa: tglPeriksa,
+                kodedokter: 1,
+                namadokter: "Test",
+                jampraktek: "08:00-12:00",
+                jeniskunjungan: 1,
+                nomorreferensi: noRujukan,
+                nomorantrean: "001",
+                angkaantrean: 1,
+                estimasidilayani: Date.now() + 3600000,
+                sisakuotajkn: 10,
+                kuotajkn: 10,
+                sisakuotanonjkn: 0,
+                kuotanonjkn: 0,
+                keterangan: "Test rujukan validity"
+            };
+
+            const url = `${baseUrl}/antrean/add`;
+            const response = await firstValueFrom(
+                this.httpService.post(url, payload, { headers })
+            );
+
+            const metadata = response.data.metadata || response.data.metaData;
+            const message = metadata?.message || '';
+
+            // Check for expired rujukan message
+            const isExpired = message.includes('masa berlaku habis') ||
+                message.includes('tidak valid');
+
+            return {
+                metadata: {
+                    code: metadata?.code || 200,
+                    message: metadata?.message || 'OK'
+                },
+                response: {
+                    noRujukan,
+                    targetDate: tglPeriksa,
+                    isValid: !isExpired,
+                    isExpired,
+                    validationMessage: message
+                }
+            };
+        } catch (error) {
+            this.logger.error(`Failed to check rujukan expiry for ${noRujukan}`, error.stack);
+            return {
+                metadata: {
+                    code: 500,
+                    message: 'Failed to validate rujukan'
+                },
+                response: {
+                    noRujukan,
+                    targetDate: targetDate || new Date().toISOString().split('T')[0],
+                    isValid: false,
+                    isExpired: false,
+                    validationMessage: error.message
+                }
+            };
+        }
+    }
+
     async getSuratKontrol(noSuratKontrol: string) {
         return this.makeRequest('vclaim', 'get', `/RencanaKontrol/noSuratKontrol/${noSuratKontrol}`);
     }
@@ -717,6 +797,243 @@ export class BpjsService {
             this.logger.error(`[CREATE-SEP-MIMIC] Error: ${error.message}`, error.stack);
             return {
                 metaData: { code: 500, message: `Internal Server Error: ${error.message}` }
+            };
+        } finally {
+            await queryRunner.release();
+        }
+    }
+
+    async createSepWithValidation(identifier: string, sepPayload: any) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            // 1. Find registration data
+            const regDummy = await this.registrasisRepository.findOne({
+                where: [
+                    { no_rm: identifier },
+                    { nik: identifier },
+                    { nomorkartu: identifier },
+                    { nomorantrian: identifier },
+                ],
+                order: { id: 'DESC' }
+            });
+
+            if (!regDummy) {
+                return {
+                    metaData: { code: 404, message: `Data registrasi tidak ditemukan untuk identifier: ${identifier}` },
+                    response: null
+                };
+            }
+
+            // 2. Validate rujukan expiry if rujukan number is provided
+            if (sepPayload.noRujukan) {
+                const rujukanCheck = await this.checkRujukanExpiry(
+                    sepPayload.noRujukan,
+                    sepPayload.tglSep || new Date().toISOString().split('T')[0]
+                );
+
+                if (rujukanCheck.response.isExpired) {
+                    await queryRunner.rollbackTransaction();
+                    return {
+                        metaData: {
+                            code: 201,
+                            message: rujukanCheck.response.validationMessage || 'Rujukan sudah tidak valid / masa berlaku habis'
+                        },
+                        response: rujukanCheck.response
+                    };
+                }
+            }
+
+            // 3. Create BPJS Antrean if nomorantrian exists
+            if (regDummy.nomorantrian) {
+                const timestamp = Math.floor(Date.now() / 1000).toString();
+                const headers = this.generateHeaders(timestamp, 'antrean');
+                const { baseUrl } = this.getServiceConfig('antrean');
+
+                // Add antrean
+                const antreanPayload = {
+                    kodebooking: regDummy.kodebooking || regDummy.nomorantrian,
+                    jenispasien: "JKN",
+                    nomorkartu: sepPayload.noKartu || regDummy.nomorkartu,
+                    nik: sepPayload.nik || regDummy.nik,
+                    nohp: sepPayload.noTelp || regDummy.no_hp || '08123456789',
+                    kodepoli: sepPayload.poliTujuan || regDummy.kode_poli,
+                    namapoli: sepPayload.namaPoliTujuan || 'Poli',
+                    pasienbaru: regDummy.no_rm ? 0 : 1,
+                    norm: regDummy.no_rm || '',
+                    tanggalperiksa: sepPayload.tglSep || new Date().toISOString().split('T')[0],
+                    kodedokter: sepPayload.kodeDPJP || regDummy.kode_dokter || 1,
+                    namadokter: sepPayload.namaDokter || 'Dokter',
+                    jampraktek: "08:00-14:00",
+                    jeniskunjungan: sepPayload.jenisKunjungan || 1,
+                    nomorreferensi: sepPayload.noRujukan || '',
+                    nomorantrean: regDummy.nomorantrian.slice(-4),
+                    angkaantrean: parseInt(regDummy.nomorantrian.slice(-4)),
+                    estimasidilayani: Date.now() + 3600000,
+                    sisakuotajkn: 10,
+                    kuotajkn: 10,
+                    sisakuotanonjkn: 0,
+                    kuotanonjkn: 0,
+                    keterangan: "Pembuatan SEP"
+                };
+
+                try {
+                    const antreanUrl = `${baseUrl}/antrean/add`;
+                    const antreanResponse = await firstValueFrom(
+                        this.httpService.post(antreanUrl, antreanPayload, { headers })
+                    );
+
+                    const antreanMeta = antreanResponse.data.metadata || antreanResponse.data.metaData;
+
+                    // Check if rujukan is invalid from antrean response
+                    if (antreanMeta?.code === 201 &&
+                        antreanMeta?.message?.includes('masa berlaku habis')) {
+                        await queryRunner.rollbackTransaction();
+                        return {
+                            metaData: antreanMeta,
+                            response: null
+                        };
+                    }
+
+                    // Update task IDs (1, 2, 3)
+                    for (let taskId = 1; taskId <= 3; taskId++) {
+                        const updatePayload = {
+                            kodebooking: regDummy.kodebooking || regDummy.nomorantrian,
+                            taskid: taskId,
+                            waktu: Date.now()
+                        };
+
+                        const updateUrl = `${baseUrl}/antrean/updatewaktu`;
+                        await firstValueFrom(
+                            this.httpService.post(updateUrl, updatePayload, { headers })
+                        ).catch(() => {
+                            // Ignore update errors
+                        });
+
+                        if (taskId < 3) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
+                } catch (antreanError) {
+                    this.logger.warn(`Antrean creation failed: ${antreanError.message}`);
+                    // Continue with SEP creation even if antrean fails
+                }
+            }
+
+            // 4. Build SEP payload
+            const sepVClaimPayload = {
+                request: {
+                    t_sep: {
+                        noKartu: sepPayload.noKartu || regDummy.nomorkartu,
+                        tglSep: sepPayload.tglSep || new Date().toISOString().split('T')[0],
+                        ppkPelayanan: this.configService.get('VCLAIM_PPK_PELAYANAN') || '0301R001',
+                        jnsPelayanan: sepPayload.jnsPelayanan || '2',
+                        klsRawat: {
+                            klsRawatHak: sepPayload.klsRawatHak || '3',
+                            klsRawatNaik: sepPayload.klsRawatNaik || '',
+                            pembiayaan: sepPayload.pembiayaan || '',
+                            penanggungJawab: sepPayload.penanggungJawab || ''
+                        },
+                        noMR: sepPayload.noMR || regDummy.no_rm,
+                        rujukan: {
+                            asalRujukan: sepPayload.asalRujukan || '1',
+                            tglRujukan: sepPayload.tglRujukan || new Date().toISOString().split('T')[0],
+                            noRujukan: sepPayload.noRujukan || '',
+                            ppkRujukan: sepPayload.ppkRujukan || ''
+                        },
+                        catatan: sepPayload.catatan || '-',
+                        diagAwal: sepPayload.diagAwal || '',
+                        poli: {
+                            tujuan: sepPayload.poliTujuan || regDummy.kode_poli,
+                            eksekutif: '0'
+                        },
+                        cob: {
+                            cob: sepPayload.cob || '0'
+                        },
+                        katarak: {
+                            katarak: sepPayload.katarak || '0'
+                        },
+                        jaminan: {
+                            lakaLantas: sepPayload.lakaLantas || '0',
+                            noLP: sepPayload.noLP || '',
+                            penjamin: {
+                                penjamin: sepPayload.penjamin || '',
+                                tglKejadian: sepPayload.tglKejadian || '',
+                                keterangan: sepPayload.keterangan || '',
+                                suplesi: {
+                                    suplesi: sepPayload.suplesi || '0',
+                                    noSepSuplesi: sepPayload.noSepSuplesi || '',
+                                    lokasiLaka: {
+                                        kdPropinsi: sepPayload.kdPropinsi || '',
+                                        kdKabupaten: sepPayload.kdKabupaten || '',
+                                        kdKecamatan: sepPayload.kdKecamatan || ''
+                                    }
+                                }
+                            }
+                        },
+                        tujuanKunj: sepPayload.tujuanKunj || '0',
+                        flagProcedure: sepPayload.flagProcedure || '',
+                        kdPenunjang: sepPayload.kdPenunjang || '',
+                        assesmentPel: sepPayload.assesmentPel || '',
+                        skdp: {
+                            noSurat: sepPayload.noSurat || '',
+                            kodeDPJP: sepPayload.kodeDPJP || regDummy.kode_dokter || ''
+                        },
+                        dpjpLayan: sepPayload.dpjpLayan || regDummy.kode_dokter || '',
+                        noTelp: sepPayload.noTelp || regDummy.no_hp || '',
+                        user: 'RSUD-OTISTA-MIMIC'
+                    }
+                }
+            };
+
+            // 5. Execute VClaim SEP Insertion
+            const bpjsResponse = await this.insertSepV2(sepVClaimPayload);
+
+            if (bpjsResponse?.metaData?.code !== '200' &&
+                bpjsResponse?.metaData?.code !== 200 &&
+                bpjsResponse?.metaData?.code !== 1) {
+                await queryRunner.rollbackTransaction();
+                return {
+                    metaData: {
+                        code: 201,
+                        message: `Gagal Insert SEP BPJS: ${bpjsResponse?.metaData?.message}`
+                    },
+                    response: bpjsResponse
+                };
+            }
+
+            const sepData = bpjsResponse.response?.sep;
+            const noSep = sepData?.noSep;
+
+            // 6. Update registrasi_dummy with SEP number
+            if (noSep) {
+                regDummy.no_sep = noSep;
+                await queryRunner.manager.save(regDummy);
+            }
+
+            await queryRunner.commitTransaction();
+
+            return {
+                metaData: {
+                    code: 200,
+                    message: 'Sukses'
+                },
+                response: {
+                    noSep,
+                    cetak: sepData
+                }
+            };
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            this.logger.error(`Failed to create SEP with validation: ${error.message}`, error.stack);
+            return {
+                metaData: {
+                    code: 500,
+                    message: `Error: ${error.message}`
+                },
+                response: null
             };
         } finally {
             await queryRunner.release();

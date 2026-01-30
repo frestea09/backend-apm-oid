@@ -306,6 +306,70 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Get('vclaim/rujukan/check-expiry/:norujukan')
+    @ApiOperation({ summary: 'Check Rujukan Expiry / Validity' })
+    @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '0114U1630316Y000003' })
+    @ApiQuery({ name: 'targetDate', required: false, description: 'Target date to check (YYYY-MM-DD)', example: '2024-01-30' })
+    @ApiResponse({ status: 200, description: 'Rujukan validity check result' })
+    async checkRujukanExpiry(
+        @Param('norujukan') norujukan: string,
+        @Query('targetDate') targetDate?: string
+    ) {
+        return await this.bpjsService.checkRujukanExpiry(norujukan, targetDate);
+    }
+
+    @ApiTags('VClaim')
+    @Post('vclaim/sep/create-with-validation/:identifier')
+    @ApiOperation({ summary: 'Create SEP with Rujukan Validation (RSUD-Otista Style)' })
+    @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu BPJS / Nomor Antrean', example: '123456' })
+    @ApiBody({
+        description: 'SEP Creation Payload',
+        schema: {
+            type: 'object',
+            properties: {
+                noKartu: { type: 'string', example: '0001149957551' },
+                nik: { type: 'string', example: '3201234567890123' },
+                noRujukan: { type: 'string', example: '0114U1630316Y000003' },
+                tglRujukan: { type: 'string', example: '2024-01-15' },
+                ppkRujukan: { type: 'string', example: '0301R001' },
+                asalRujukan: { type: 'string', example: '1', description: '1=PPK1, 2=RS' },
+                tglSep: { type: 'string', example: '2024-01-30' },
+                jnsPelayanan: { type: 'string', example: '2', description: '1=Rawat Inap, 2=Rawat Jalan' },
+                klsRawatHak: { type: 'string', example: '3' },
+                noMR: { type: 'string', example: '123456' },
+                diagAwal: { type: 'string', example: 'A09' },
+                poliTujuan: { type: 'string', example: '001' },
+                namaPoliTujuan: { type: 'string', example: 'Poli Umum' },
+                kodeDPJP: { type: 'string', example: '12345' },
+                dpjpLayan: { type: 'string', example: '12345' },
+                namaDokter: { type: 'string', example: 'dr. John Doe' },
+                noTelp: { type: 'string', example: '08123456789' },
+                catatan: { type: 'string', example: 'Catatan tambahan' },
+                tujuanKunj: { type: 'string', example: '0', description: '0=Normal, 1=Prosedur, 2=Konsul' },
+                flagProcedure: { type: 'string', example: '' },
+                kdPenunjang: { type: 'string', example: '' },
+                assesmentPel: { type: 'string', example: '' },
+                noSurat: { type: 'string', example: '', description: 'No Surat Kontrol (SKDP)' },
+                cob: { type: 'string', example: '0' },
+                katarak: { type: 'string', example: '0' },
+                lakaLantas: { type: 'string', example: '0' },
+                klsRawatNaik: { type: 'string', example: '' },
+                pembiayaan: { type: 'string', example: '' },
+                penanggungJawab: { type: 'string', example: '' },
+                jenisKunjungan: { type: 'number', example: 1, description: '1=Rujukan FKTP, 2=Rujukan Internal, 3=Kontrol, 4=Rujukan Antar RS' }
+            }
+        }
+    })
+    @ApiResponse({ status: 200, description: 'SEP created successfully' })
+    @ApiResponse({ status: 201, description: 'Rujukan expired or invalid' })
+    async createSepWithValidation(
+        @Param('identifier') identifier: string,
+        @Body() sepPayload: any
+    ) {
+        return await this.bpjsService.createSepWithValidation(identifier, sepPayload);
+    }
+
+    @ApiTags('VClaim')
     @Get('vclaim/rencanakontrol/nosuratkontrol/:nosuratkontrol')
     @ApiOperation({ summary: 'Melihat data SEP untuk keperluan rencana kontrol' })
     @ApiParam({ name: 'nosuratkontrol', description: 'Nomor Surat Kontrol Peserta', example: '0301R0111125K000002' })
