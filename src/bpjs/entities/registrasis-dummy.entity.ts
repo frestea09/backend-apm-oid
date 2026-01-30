@@ -43,7 +43,4 @@ export class RegistrasisDummy {
 
     @Column({ name: 'kode_dokter', nullable: true })
     kode_dokter: string;
-
-    @Column({ name: 'no_sep', nullable: true })
-    no_sep: string;
 }
