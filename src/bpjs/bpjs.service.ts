@@ -1008,10 +1008,10 @@ export class BpjsService {
             const noSep = sepData?.noSep;
 
             // 6. Update registrasi_dummy with SEP number
-            if (noSep) {
-                regDummy.no_sep = noSep;
-                await queryRunner.manager.save(regDummy);
-            }
+            // if (noSep) {
+            //     regDummy.no_sep = noSep;
+            //     await queryRunner.manager.save(regDummy);
+            // }
 
             await queryRunner.commitTransaction();
 
