@@ -219,11 +219,15 @@ export class BpjsService {
     }
 
     async getLastSepByNoRujukan(noRujukan: string) {
-        return this.makeRequest('vclaim', 'get', `/Rujukan/LastSEP/NoRujukan/${noRujukan}`);
+        return this.makeRequest('vclaim', 'get', `/Rujukan/RS/LastSEP/NoRujukan/${noRujukan}`);
     }
 
     async getRujukanByNoRujukan(noRujukan: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/${noRujukan}`);
+    }
+
+    async getRujukanRSByNoRujukan(noRujukan: string) {
+        return this.makeRequest('vclaim', 'get', `/Rujukan/RS/${noRujukan}`);
     }
 
     async getRujukanByNoKartu(noKartu: string) {
@@ -236,6 +240,51 @@ export class BpjsService {
 
     async getRujukanKeluarList(tglMulai: string, tglAkhir: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/Keluar/List/tglMulai/${tglMulai}/tglAkhir/${tglAkhir}`);
+    }
+
+    async getSuratKontrol(noSuratKontrol: string) {
+        return this.makeRequest('vclaim', 'get', `/RencanaKontrol/noSuratKontrol/${noSuratKontrol}`);
+    }
+
+    async findSuratKontrolByIdentifier(identifier: string) {
+        try {
+            // 1. Search in RegistrasisDummy to get no_rm
+            const regDummy = await this.registrasisRepository.findOne({
+                where: [
+                    { kodebooking: identifier },
+                    { no_rm: identifier },
+                    { nik: identifier },
+                    { nomorkartu: identifier },
+                ],
+                order: { id: 'DESC' }
+            });
+
+            if (!regDummy) {
+                return { metaData: { code: 404, message: `Pendaftaran tidak ditemukan untuk identifier '${identifier}' di database lokal.` } };
+            }
+
+            // 2. Find Pasien ID from no_rm
+            const pasien = await this.pasiensRepository.findOne({ where: { no_rm: regDummy.no_rm } });
+            if (!pasien) {
+                return { metaData: { code: 404, message: `Pasien dengan no_rm '${regDummy.no_rm}' tidak ditemukan.` } };
+            }
+
+            // 3. Find no_surat_kontrol in bpjs_rencana_kontrol
+            const renkon = await this.bpjsRencanaKontrolRepository.findOne({
+                where: { pasien_id: pasien.id },
+                order: { id: 'DESC' }
+            });
+
+            if (!renkon || !renkon.no_surat_kontrol) {
+                return { metaData: { code: 404, message: `Nomor Surat Kontrol tidak ditemukan untuk pasien ini di database lokal.` } };
+            }
+
+            // 4. Call BPJS API
+            return await this.getSuratKontrol(renkon.no_surat_kontrol);
+        } catch (error) {
+            this.logger.error(`Error in findSuratKontrolByIdentifier: ${error.message}`, error.stack);
+            return { metaData: { code: 500, message: `Internal Server Error: ${error.message}` } };
+        }
     }
 
     async insertSep(data: any) {
@@ -452,7 +501,32 @@ export class BpjsService {
                 }
 
                 // Fetch Rencana Kontrol if any
-                renkon = await this.bpjsRencanaKontrolRepository.findOneBy({ registrasi_id: regDummy.registrasi_id });
+                // Best to find by pasien_id as suggested by user
+                let curPasien = await queryRunner.manager.findOne(Pasien, { where: { no_rm: regDummy.no_rm } });
+                if (curPasien) {
+                    renkon = await this.bpjsRencanaKontrolRepository.findOne({
+                        where: { pasien_id: curPasien.id },
+                        order: { id: 'DESC' }
+                    });
+                } else {
+                    // Fallback
+                    renkon = await this.bpjsRencanaKontrolRepository.findOneBy({ registrasi_id: regDummy.registrasi_id });
+                }
+
+                // If rujukan doesn't have diagnosis, try fetching from Surat Kontrol
+                if (!rujukan?.diagnosa?.kode && renkon?.no_surat_kontrol) {
+                    const skRes = await this.getSuratKontrol(renkon.no_surat_kontrol);
+                    if (skRes?.metaData?.code == 200 || skRes?.metaData?.code == "200") {
+                        const skData = skRes.response;
+                        const diagRaw = skData?.sep?.diagnosa || '';
+                        const diagCode = diagRaw.split(' - ')[0];
+                        if (diagCode) {
+                            if (!rujukan) rujukan = { diagnosa: {} };
+                            if (!rujukan.diagnosa) rujukan.diagnosa = {};
+                            rujukan.diagnosa.kode = diagCode;
+                        }
+                    }
+                }
             } catch (err) {
                 this.logger.warn(`[CREATE-SEP-MIMIC] Warning fetching BPJS supplements: ${err.message}`);
             }

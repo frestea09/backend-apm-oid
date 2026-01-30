@@ -248,6 +248,15 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Get('vclaim/rujukan/rs/:norujukan')
+    @ApiOperation({ summary: 'Pencarian data rujukan dari rumah sakit berdasarkan nomor rujukan' })
+    @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '12345678' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted rujukan data' })
+    async getRujukanRSByNoRujukan(@Param('norujukan') norujukan: string) {
+        return await this.bpjsService.getRujukanRSByNoRujukan(norujukan);
+    }
+
+    @ApiTags('VClaim')
     @Get('vclaim/rujukan/peserta/:nokartu')
     @ApiOperation({ summary: 'Pencarian data rujukan dari rumahsakit berdasarkan nomor kartu' })
     @ApiParam({ name: 'nokartu', description: 'Nomor Kartu Peserta', example: '0001462707099' })
@@ -276,6 +285,24 @@ export class BpjsController {
         @Param('tglAkhir') tglAkhir: string,
     ) {
         return await this.bpjsService.getRujukanKeluarList(tglMulai, tglAkhir);
+    }
+
+    @ApiTags('VClaim')
+    @Get('vclaim/rencanakontrol/nosuratkontrol/:nosuratkontrol')
+    @ApiOperation({ summary: 'Melihat data SEP untuk keperluan rencana kontrol' })
+    @ApiParam({ name: 'nosuratkontrol', description: 'Nomor Surat Kontrol Peserta', example: '0301R0111125K000002' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted surat kontrol data' })
+    async getSuratKontrol(@Param('nosuratkontrol') nosuratkontrol: string) {
+        return await this.bpjsService.getSuratKontrol(nosuratkontrol);
+    }
+
+    @ApiTags('VClaim')
+    @Get('vclaim/rencanakontrol/cari/:identifier')
+    @ApiOperation({ summary: 'Mencari data Surat Kontrol berdasarkan No RM / NIK / No Kartu / Kode Booking (Local DB Lookup + VClaim)' })
+    @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu / Kode Booking', example: 'A-12' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted surat kontrol data found via local DB lookup' })
+    async cariSuratKontrol(@Param('identifier') identifier: string) {
+        return await this.bpjsService.findSuratKontrolByIdentifier(identifier);
     }
 
     @ApiTags('VClaim')
