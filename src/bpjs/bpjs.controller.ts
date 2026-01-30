@@ -287,6 +287,24 @@ export class BpjsController {
         return await this.bpjsService.getRujukanKeluarList(tglMulai, tglAkhir);
     }
 
+    @ApiTags('PCare')
+    @Get('pcare/kunjungan/rujukan/:nokunjungan')
+    @ApiOperation({ summary: 'Get Data Rujukan (PCare)' })
+    @ApiParam({ name: 'nokunjungan', description: 'Nomor Kunjungan / Rujukan', example: '0114U1630316Y000003' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted rujukan data' })
+    async getKunjunganRujukan(@Param('nokunjungan') nokunjungan: string) {
+        return await this.bpjsService.getKunjunganRujukan(nokunjungan);
+    }
+
+    @ApiTags('PCare')
+    @Get('pcare/kunjungan/peserta/:nokartu')
+    @ApiOperation({ summary: 'Get Data Riwayat Kunjungan (PCare)' })
+    @ApiParam({ name: 'nokartu', description: 'Nomor Kartu Peserta', example: '0001149957551' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted kunjungan history' })
+    async getKunjunganPeserta(@Param('nokartu') nokartu: string) {
+        return await this.bpjsService.getKunjunganPeserta(nokartu);
+    }
+
     @ApiTags('VClaim')
     @Get('vclaim/rencanakontrol/nosuratkontrol/:nosuratkontrol')
     @ApiOperation({ summary: 'Melihat data SEP untuk keperluan rencana kontrol' })

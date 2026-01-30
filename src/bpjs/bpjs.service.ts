@@ -51,7 +51,7 @@ export class BpjsService {
         private readonly bpjsRencanaKontrolRepository: Repository<BpjsRencanaKontrol>,
     ) { }
 
-    private getServiceConfig(service: 'antrean' | 'vclaim') {
+    private getServiceConfig(service: 'antrean' | 'vclaim' | 'pcare') {
         const prefix = service.toUpperCase();
         return {
             baseUrl: this.configService.get<string>(`${prefix}_BASE_URL`) || '',
@@ -61,7 +61,7 @@ export class BpjsService {
         };
     }
 
-    generateHeaders(timestamp: string, service: 'antrean' | 'vclaim', contentType: string = 'application/json') {
+    generateHeaders(timestamp: string, service: 'antrean' | 'vclaim' | 'pcare', contentType: string = 'application/json') {
         const { consId, secretKey, userKey } = this.getServiceConfig(service);
 
         if (!consId || !secretKey || !userKey) {
@@ -84,7 +84,7 @@ export class BpjsService {
         };
     }
 
-    decryptResponse(encryptedData: string, timestamp: string, service: 'antrean' | 'vclaim'): any {
+    decryptResponse(encryptedData: string, timestamp: string, service: 'antrean' | 'vclaim' | 'pcare'): any {
         try {
             const { consId, secretKey } = this.getServiceConfig(service);
             const key = `${consId}${secretKey}${timestamp}`;
@@ -109,7 +109,7 @@ export class BpjsService {
         }
     }
 
-    private async makeRequest(service: 'antrean' | 'vclaim', method: 'get' | 'post', path: string, payload?: any, contentType?: string) {
+    private async makeRequest(service: 'antrean' | 'vclaim' | 'pcare', method: 'get' | 'post', path: string, payload?: any, contentType?: string) {
         const timestamp = Math.floor(Date.now() / 1000).toString();
         let config: any = {};
         try {
@@ -240,6 +240,14 @@ export class BpjsService {
 
     async getRujukanKeluarList(tglMulai: string, tglAkhir: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/Keluar/List/tglMulai/${tglMulai}/tglAkhir/${tglAkhir}`);
+    }
+
+    async getKunjunganRujukan(noKunjungan: string) {
+        return this.makeRequest('pcare', 'get', `/kunjungan/rujukan/${noKunjungan}`);
+    }
+
+    async getKunjunganPeserta(noKartu: string) {
+        return this.makeRequest('pcare', 'get', `/kunjungan/peserta/${noKartu}`);
     }
 
     async getSuratKontrol(noSuratKontrol: string) {
