@@ -266,6 +266,19 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Get('vclaim/rujukan/keluar/list/tglMulai/:tglMulai/tglAkhir/:tglAkhir')
+    @ApiOperation({ summary: 'List Data Rujukan Keluar RS' })
+    @ApiParam({ name: 'tglMulai', description: 'Tanggal Mulai (YYYY-MM-DD)', example: '2021-12-01' })
+    @ApiParam({ name: 'tglAkhir', description: 'Tanggal Akhir (YYYY-MM-DD)', example: '2021-12-31' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted rujukan keluar list' })
+    async getRujukanKeluarList(
+        @Param('tglMulai') tglMulai: string,
+        @Param('tglAkhir') tglAkhir: string,
+    ) {
+        return await this.bpjsService.getRujukanKeluarList(tglMulai, tglAkhir);
+    }
+
+    @ApiTags('VClaim')
     @Post('vclaim/sep/insert')
     @ApiOperation({ summary: 'Insert SEP versi 1.1' })
     @ApiBody({
@@ -467,5 +480,14 @@ export class BpjsController {
     @ApiResponse({ status: 200, description: 'Success response with prepared JSON payload' })
     async generateInsertV2(@Param('identifier') identifier: string) {
         return await this.bpjsService.generateSepInsertV2Payload(identifier);
+    }
+
+    @ApiTags('VClaim')
+    @Post('vclaim/sep/create-mimic-oto/:identifier')
+    @ApiOperation({ summary: 'Insert SEP dengan Business Logic SIMRS (Mimic apm-oto)' })
+    @ApiParam({ name: 'identifier', description: 'No RM / NIK / No Kartu / Kode Booking', example: '22012026BRTSAR1' })
+    @ApiResponse({ status: 201, description: 'Success response with Decrypted SEP data and local DB info' })
+    async createSepMimicOto(@Param('identifier') identifier: string) {
+        return await this.bpjsService.createSepOtoMimic(identifier);
     }
 }

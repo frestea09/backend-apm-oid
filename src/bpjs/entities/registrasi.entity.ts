@@ -56,6 +56,39 @@ export class Registrasi {
     @Column({ nullable: true })
     antrian_poli: number;
 
+    @Column({ nullable: true })
+    no_sep: string;
+
+    @Column({ nullable: true })
+    tgl_sep: string;
+
+    @Column({ nullable: true })
+    diagnosa_awal: string;
+
+    @Column({ nullable: true })
+    tgl_rujukan: string;
+
+    @Column({ nullable: true })
+    ppk_rujukan: string;
+
+    @Column({ nullable: true })
+    nomorrujukan: string;
+
+    @Column({ nullable: true })
+    poli_bpjs: string;
+
+    @Column({ nullable: true })
+    hakkelas: string;
+
+    @Column({ nullable: true })
+    catatan: string;
+
+    @Column({ nullable: true })
+    kecelakaan: string;
+
+    @Column({ nullable: true })
+    jenis_kunjungan: string;
+
     @CreateDateColumn()
     created_at: Date;
 
