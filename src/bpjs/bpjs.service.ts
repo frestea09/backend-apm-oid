@@ -487,12 +487,14 @@ export class BpjsService {
             });
 
             if (!regDummy) {
+                await queryRunner.rollbackTransaction();
                 return { metaData: { code: 201, message: 'Maaf, Tidak dapat checkin, cek tanggal periksa' } };
             }
 
             // 2. Queue Logic (AntrianPoli)
             const poli = await queryRunner.manager.findOne(Poli, { where: { bpjs: kodePoliBpjs } });
             if (!poli) {
+                await queryRunner.rollbackTransaction();
                 return { metaData: { code: 201, message: 'Poli tidak ditemukan' } };
             }
 
@@ -634,12 +636,14 @@ export class BpjsService {
             // 1. Find the booking record
             const kodeBooking = await this.findKodeBooking(identifier, today);
             if (!kodeBooking) {
+                await queryRunner.rollbackTransaction();
                 return { metaData: { code: 404, message: `Pendaftaran tidak ditemukan untuk '${identifier}' hari ini di database lokal.` } };
             }
 
             // 2. Get full details from BPJS Antrean API
             const antreanResponse = await this.getPendaftaranByKodeBooking(kodeBooking);
             if (antreanResponse?.metadata?.code !== 200) {
+                await queryRunner.rollbackTransaction();
                 return { metaData: { code: 201, message: `Gagal mengambil data antrean dari BPJS: ${antreanResponse?.metadata?.message}` } };
             }
 
@@ -651,6 +655,7 @@ export class BpjsService {
             });
 
             if (!regDummy) {
+                await queryRunner.rollbackTransaction();
                 return { metaData: { code: 404, message: 'Data pendaftaran lokal (dummy) tidak ditemukan.' } };
             }
 
@@ -908,6 +913,7 @@ export class BpjsService {
             });
 
             if (!regDummy) {
+                await queryRunner.rollbackTransaction();
                 return {
                     metaData: { code: 404, message: `Data registrasi tidak ditemukan untuk identifier: ${identifier}` },
                     response: null
@@ -1103,22 +1109,20 @@ export class BpjsService {
             await queryRunner.commitTransaction();
 
             return {
-                metaData: {
-                    code: 200,
-                    message: 'Sukses'
-                },
+                metaData: { code: 200, message: 'SEP berhasil dibuat' },
                 response: {
-                    noSep,
-                    cetak: sepData
+                    sep: sepData,
+                    noSep: noSep,
+                    bpjsResponse: bpjsResponse
                 }
             };
         } catch (error) {
             await queryRunner.rollbackTransaction();
-            this.logger.error(`Failed to create SEP with validation: ${error.message}`, error.stack);
+            this.logger.error(`Error in createSepWithValidation: ${error.message}`, error.stack);
             return {
                 metaData: {
                     code: 500,
-                    message: `Error: ${error.message}`
+                    message: `Internal Server Error: ${error.message}`
                 },
                 response: null
             };
