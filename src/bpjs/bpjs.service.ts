@@ -111,11 +111,33 @@ export class BpjsService {
 
     private async makeRequest(service: 'antrean' | 'vclaim' | 'pcare', method: 'get' | 'post', path: string, payload?: any, contentType?: string) {
         const timestamp = Math.floor(Date.now() / 1000).toString();
+        const debugMode = this.configService.get<string>('DEBUG_MODE') === 'true';
         let config: any = {};
+        let requestDetails: any = {};
+
         try {
             config = this.getServiceConfig(service);
             const headers = this.generateHeaders(timestamp, service, contentType);
             const url = `${config.baseUrl}${path}`;
+
+            // Store request details for debug mode
+            if (debugMode) {
+                requestDetails = {
+                    service,
+                    method: method.toUpperCase(),
+                    url,
+                    path,
+                    timestamp,
+                    headers: {
+                        'X-cons-id': headers['X-cons-id'],
+                        'X-timestamp': headers['X-timestamp'],
+                        'X-signature': headers['X-signature'],
+                        'user_key': headers['user_key'],
+                        'Content-Type': headers['Content-Type'],
+                    },
+                    payload: payload || null,
+                };
+            }
 
             const response = await firstValueFrom(
                 method === 'get'
@@ -133,6 +155,17 @@ export class BpjsService {
 
             if (!metadata) {
                 this.logger.error(`Missing metadata in BPJS API response ${service} (${path}). Raw data: ${JSON.stringify(response.data)}`);
+
+                if (debugMode) {
+                    return {
+                        ...response.data,
+                        _debug: {
+                            ...requestDetails,
+                            rawResponse: response.data,
+                            error: 'Missing metadata in response',
+                        }
+                    };
+                }
                 return response.data;
             }
 
@@ -141,13 +174,39 @@ export class BpjsService {
 
             if ((code === 200 || code === 1) && typeof encryptedResponse === 'string') {
                 const decryptedData = this.decryptResponse(encryptedResponse, timestamp, service);
-                return {
+
+                const result = {
                     ...response.data,
                     response: decryptedData,
                 };
+
+                // Add debug information if debug mode is enabled
+                if (debugMode) {
+                    result['_debug'] = {
+                        ...requestDetails,
+                        rawEncryptedResponse: encryptedResponse,
+                        decryptedResponse: decryptedData,
+                        metadata,
+                        decryptionSuccess: true,
+                    };
+                }
+
+                return result;
             }
 
-            return response.data;
+            // For non-200 responses or non-encrypted responses
+            const result = response.data;
+
+            if (debugMode) {
+                result['_debug'] = {
+                    ...requestDetails,
+                    rawResponse: response.data,
+                    metadata,
+                    note: 'Response was not encrypted or code was not 200/1',
+                };
+            }
+
+            return result;
         } catch (error) {
             const status = error.response?.status || 500;
             const errorData = error.response?.data;
@@ -159,19 +218,47 @@ export class BpjsService {
             }
 
             // Return a structured error that doesn't trigger NestJS 500 Internal Server Error
-            return {
+            const errorResponse = {
                 metaData: {
                     code: status,
                     message: `Bridge Error: ${errorMessage}`,
                     source: service.toUpperCase(),
                 },
                 response: errorData || null,
-                _debug: {
+            };
+
+            // Add comprehensive debug information in debug mode
+            if (debugMode) {
+                errorResponse['_debug'] = {
+                    ...requestDetails,
+                    error: {
+                        message: errorMessage,
+                        status,
+                        stack: error.stack,
+                        rawErrorData: errorData,
+                        fullError: {
+                            name: error.name,
+                            message: error.message,
+                            code: error.code,
+                            response: {
+                                status: error.response?.status,
+                                statusText: error.response?.statusText,
+                                headers: error.response?.headers,
+                                data: error.response?.data,
+                            }
+                        }
+                    },
+                    baseUrl: config.baseUrl,
+                };
+            } else {
+                errorResponse['_debug'] = {
                     path,
                     timestamp,
                     baseUrl: config.baseUrl
-                }
-            };
+                };
+            }
+
+            return errorResponse;
         }
     }
 
