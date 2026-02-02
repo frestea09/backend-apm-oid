@@ -1447,7 +1447,8 @@ export class BpjsService {
 
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
-            const tglSep = data.tgl_periksa || new Date().toISOString().split('T')[0]; // Fallback to today if null, though likely should exist
+            // User request: "untuk tglSep coba diisi oleh tanggal sekarang untuk ujicoba"
+            const tglSep = new Date().toISOString().split('T')[0];
 
             // 2. Fetch Peserta from BPJS to get Hak Kelas (Important!)
             let klsRawatHak = '';
