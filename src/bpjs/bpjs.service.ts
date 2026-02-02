@@ -1426,17 +1426,17 @@ export class BpjsService {
                   ON bk.registrasi_id = r.id
                   AND bk.pasien_id = p.id
                 WHERE 
-                   r.id::text = $1
-                   OR p.no_rm = $1
-                   OR p.nik = $1
-                   OR p.no_jkn = $1
-                   OR rd.nomorkartu = $1
-                   OR rd.kodebooking = $1
+                   CAST(r.id AS CHAR) = ?
+                   OR p.no_rm = ?
+                   OR p.nik = ?
+                   OR p.no_jkn = ?
+                   OR rd.nomorkartu = ?
+                   OR rd.kodebooking = ?
                 ORDER BY r.id DESC
                 LIMIT 1
             `;
 
-            const results = await queryRunner.query(query, [identifier]);
+            const results = await queryRunner.query(query, [identifier, identifier, identifier, identifier, identifier, identifier]);
 
             if (!results || results.length === 0) {
                 return {
