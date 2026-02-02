@@ -1463,25 +1463,64 @@ export class BpjsService {
             // 3. Construct Payload
             // Prioritize Dummy/Reg data, fallbacks to defaults
 
+            // Helper to format date YYYY-MM-DD
+            const formatDate = (date: any) => {
+                if (!date) return '';
+                if (date instanceof Date) return date.toISOString().split('T')[0];
+                return date.toString().split('T')[0];
+            };
+
+            // Fix ppkRujukan (remove name if pipe exists)
+            let ppkRujukan = data.ppk_rujukan || '';
+            if (ppkRujukan.includes('|')) {
+                ppkRujukan = ppkRujukan.split('|')[0];
+            }
+
+            // Logic tujuanKunj & skdp
+            // "jika terdapat noSurat dan kodeDPJP di Skdp tujuanKunj set = 2 dan assesmentPel = 5"
+            // "jika tujuanKunj = 0 field nosurat dan KodepDPJP kosongkan saja"
+            let tujuanKunj = data.tujuanKunj || '0';
+            let assesmentPel = data.assesmentPel || '';
+            let skdpNoSurat = data.no_surat_kontrol || '';
+            let skdpKodeDPJP = data.kode_dpjp_dummy || '';
+
+            if (skdpNoSurat && skdpKodeDPJP) {
+                tujuanKunj = '2'; // Konsul Dokter (Kontrol)
+                assesmentPel = '5'; // Tujuan Kontrol
+            } else {
+                // Should force 0 if no surat kontrol? Usually yes for rujukan baru
+                if (data.no_rujukan_reg || data.no_rujukan_dummy) {
+                    // Keep existing logic or default to 0
+                }
+                tujuanKunj = '0'; // Normal
+            }
+
+            // Clean up if tujuanKunj is 0
+            if (tujuanKunj === '0') {
+                skdpNoSurat = '';
+                skdpKodeDPJP = '';
+                assesmentPel = '';
+            }
+
             const payload = {
                 request: {
                     t_sep: {
                         noKartu: noKartu,
                         tglSep: tglSep,
-                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011', // Default from user example or ENV
-                        jnsPelayanan: '2', // Default Rawat Jalan based on user context
+                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011',
+                        jnsPelayanan: '2',
                         klsRawat: {
-                            klsRawatHak: klsRawatHak || '3', // Fallback 3 is risky but needed if API fails
+                            klsRawatHak: klsRawatHak || '3',
                             klsRawatNaik: '',
                             pembiayaan: '',
                             penanggungJawab: ''
                         },
                         noMR: data.no_mr,
                         rujukan: {
-                            asalRujukan: '1', // Default Faskes 1, user should ideally specify logic or input
-                            tglRujukan: data.tgl_rujukan || '',
+                            asalRujukan: '1',
+                            tglRujukan: formatDate(data.tgl_rujukan),
                             noRujukan: data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || '',
-                            ppkRujukan: data.ppk_rujukan || ''
+                            ppkRujukan: ppkRujukan
                         },
                         catatan: 'SEP Created via SIMRS Integration',
                         diagAwal: data.diagnosa_awal_reg || data.diagnosa_awal_kontrol || '',
@@ -1504,13 +1543,13 @@ export class BpjsService {
                                 }
                             }
                         },
-                        tujuanKunj: data.tujuanKunj || '0',
+                        tujuanKunj: tujuanKunj,
                         flagProcedure: data.flagProcedure || '',
                         kdPenunjang: data.kdPenunjang || '',
-                        assesmentPel: data.assesmentPel || '',
+                        assesmentPel: assesmentPel,
                         skdp: {
-                            noSurat: data.no_surat_kontrol || '',
-                            kodeDPJP: data.kode_dpjp_dummy || ''
+                            noSurat: skdpNoSurat,
+                            kodeDPJP: skdpKodeDPJP
                         },
                         dpjpLayan: data.kode_dpjp_dummy || '',
                         noTelp: data.telp_from_dummy || data.telp_pasien || '',
@@ -1521,6 +1560,7 @@ export class BpjsService {
 
             // 4. Validate Critical Fields before sending
             // e.g. DiagAwal is mandatory
+
 
             // 5. Send to BPJS
             const bpjsResponse = await this.insertSepV2(payload);
