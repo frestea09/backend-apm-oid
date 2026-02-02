@@ -599,4 +599,12 @@ export class BpjsController {
     async createSepMimicOto(@Param('identifier') identifier: string) {
         return await this.bpjsService.createSepOtoMimic(identifier);
     }
+    @ApiTags('VClaim')
+    @Post('vclaim/sep/create-from-simrs/:identifier')
+    @ApiOperation({ summary: 'Create SEP from SIMRS Data (Custom SQL Integration)' })
+    @ApiParam({ name: 'identifier', description: 'Registrasi ID / No RM / NIK / No Kartu / Kode Booking', example: '849196' })
+    @ApiResponse({ status: 200, description: 'Attempted to create SEP' })
+    async createSepFromSimrs(@Param('identifier') identifier: string) {
+        return await this.bpjsService.createSepFromSimrs(identifier);
+    }
 }

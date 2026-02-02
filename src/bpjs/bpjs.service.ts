@@ -1370,4 +1370,178 @@ export class BpjsService {
             return { metaData: { code: 500, message: `Error generating payload: ${error.message}` } };
         }
     }
+
+    async createSepFromSimrs(identifier: string) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        try {
+            this.logger.log(`[SEP-SIMRS] Starting creation for identifier: ${identifier} with User Query`);
+
+            // 1. Execute Custom User Query Adapted for Search
+            const query = `
+                SELECT
+                  r.id                          AS registrasi_id,
+                  r.reg_id                      AS reg_id,
+                  r.pasien_id                   AS pasien_id,
+
+                  p.no_rm                       AS no_mr,
+                  p.nama                        AS nama_pasien,
+                  p.no_jkn                      AS no_kartu_from_pasiens,
+                  p.nik                         AS nik_pasien,
+                  COALESCE(p.nohp, p.notlp)     AS telp_pasien,
+
+                  rd.nomorkartu                 AS no_kartu_from_dummy,
+                  rd.no_hp                      AS telp_from_dummy,
+                  rd.tglperiksa                 AS tgl_periksa,
+                  rd.kode_poli                  AS kode_poli_dummy,
+                  rd.no_rujukan                 AS no_rujukan_dummy,
+                  rd.polieksekutif              AS poli_eksekutif,
+                  rd.kode_dokter                AS kode_dpjp_dummy,
+
+                  r.no_rujukan                  AS no_rujukan_reg,
+                  r.tgl_rujukan                 AS tgl_rujukan,
+                  r.ppk_rujukan                 AS ppk_rujukan,
+                  r.diagnosa_awal               AS diagnosa_awal_reg,
+                  r.no_sep                      AS no_sep_reg,
+                  r.tgl_sep                     AS tgl_sep_reg,
+                  r.poli_bpjs                   AS poli_bpjs,
+
+                  bk.no_surat_kontrol           AS no_surat_kontrol,
+                  bk.no_sep                     AS no_sep_kontrol,
+                  bk.no_rujukan                 AS no_rujukan_kontrol,
+                  bk.tujuanKunj                 AS tujuanKunj,
+                  bk.flagProcedure              AS flagProcedure,
+                  bk.kdPenunjang                AS kdPenunjang,
+                  bk.assesmentPel               AS assesmentPel,
+                  bk.diagnosa_awal              AS diagnosa_awal_kontrol,
+                  bk.tgl_rencana_kontrol        AS tgl_rencana_kontrol
+
+                FROM registrasis r
+                JOIN pasiens p
+                  ON p.id = r.pasien_id
+                LEFT JOIN registrasis_dummy rd
+                  ON rd.registrasi_id = r.id
+                LEFT JOIN bpjs_rencana_kontrol bk
+                  ON bk.registrasi_id = r.id
+                  AND bk.pasien_id = p.id
+                WHERE 
+                   r.id::text = $1
+                   OR p.no_rm = $1
+                   OR p.nik = $1
+                   OR p.no_jkn = $1
+                   OR rd.nomorkartu = $1
+                   OR rd.kodebooking = $1
+                ORDER BY r.id DESC
+                LIMIT 1
+            `;
+
+            const results = await queryRunner.query(query, [identifier]);
+
+            if (!results || results.length === 0) {
+                return {
+                    metaData: { code: 404, message: `Data Registrasi tidak ditemukan untuk '${identifier}'` },
+                    _debugQuery: query
+                };
+            }
+
+            const data = results[0];
+            const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
+            const tglSep = data.tgl_periksa || new Date().toISOString().split('T')[0]; // Fallback to today if null, though likely should exist
+
+            // 2. Fetch Peserta from BPJS to get Hak Kelas (Important!)
+            let klsRawatHak = '';
+            try {
+                const pesertaRes = await this.getPesertaByNoKartu(noKartu, tglSep);
+                if (pesertaRes?.metaData?.code === '200') {
+                    klsRawatHak = pesertaRes.response?.peserta?.hakKelas?.kode || '';
+                }
+            } catch (e) {
+                this.logger.warn(`[SEP-SIMRS] Failed to fetch peserta info for Hak Kelas: ${e.message}`);
+            }
+
+            // 3. Construct Payload
+            // Prioritize Dummy/Reg data, fallbacks to defaults
+
+            const payload = {
+                request: {
+                    t_sep: {
+                        noKartu: noKartu,
+                        tglSep: tglSep,
+                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011', // Default from user example or ENV
+                        jnsPelayanan: '2', // Default Rawat Jalan based on user context
+                        klsRawat: {
+                            klsRawatHak: klsRawatHak || '3', // Fallback 3 is risky but needed if API fails
+                            klsRawatNaik: '',
+                            pembiayaan: '',
+                            penanggungJawab: ''
+                        },
+                        noMR: data.no_mr,
+                        rujukan: {
+                            asalRujukan: '1', // Default Faskes 1, user should ideally specify logic or input
+                            tglRujukan: data.tgl_rujukan || '',
+                            noRujukan: data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || '',
+                            ppkRujukan: data.ppk_rujukan || ''
+                        },
+                        catatan: 'SEP Created via SIMRS Integration',
+                        diagAwal: data.diagnosa_awal_reg || data.diagnosa_awal_kontrol || '',
+                        poli: {
+                            tujuan: data.kode_poli_dummy || data.poli_bpjs || '',
+                            eksekutif: data.poli_eksekutif || '0'
+                        },
+                        cob: { cob: '0' },
+                        katarak: { katarak: '0' },
+                        jaminan: {
+                            lakaLantas: '0',
+                            noLP: '',
+                            penjamin: {
+                                tglKejadian: '',
+                                keterangan: '',
+                                suplesi: {
+                                    suplesi: '0',
+                                    noSepSuplesi: '',
+                                    lokasiLaka: { kdPropinsi: '', kdKabupaten: '', kdKecamatan: '' }
+                                }
+                            }
+                        },
+                        tujuanKunj: data.tujuanKunj || '0',
+                        flagProcedure: data.flagProcedure || '',
+                        kdPenunjang: data.kdPenunjang || '',
+                        assesmentPel: data.assesmentPel || '',
+                        skdp: {
+                            noSurat: data.no_surat_kontrol || '',
+                            kodeDPJP: data.kode_dpjp_dummy || ''
+                        },
+                        dpjpLayan: data.kode_dpjp_dummy || '',
+                        noTelp: data.telp_from_dummy || data.telp_pasien || '',
+                        user: 'APM-SIMRS-V2'
+                    }
+                }
+            };
+
+            // 4. Validate Critical Fields before sending
+            // e.g. DiagAwal is mandatory
+
+            // 5. Send to BPJS
+            const bpjsResponse = await this.insertSepV2(payload);
+
+            // 6. Return combined result
+            return {
+                metaData: bpjsResponse?.metaData,
+                response: bpjsResponse?.response,
+                _simrs_debug: {
+                    source_data: data,
+                    generated_payload: payload
+                }
+            };
+
+        } catch (error) {
+            this.logger.error(`[SEP-SIMRS] Error: ${error.message}`, error.stack);
+            return {
+                metaData: { code: 500, message: `Internal Error: ${error.message}` }
+            };
+        } finally {
+            await queryRunner.release();
+        }
+    }
 }
