@@ -309,6 +309,10 @@ export class BpjsService {
         return this.makeRequest('vclaim', 'get', `/Rujukan/RS/LastSEP/NoRujukan/${noRujukan}`);
     }
 
+    async getLastSepByRujukanV2(noRujukan: string) {
+        return this.makeRequest('vclaim', 'get', `/Rujukan/lastsep/norujukan/${noRujukan}`);
+    }
+
     async getRujukanByNoRujukan(noRujukan: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/${noRujukan}`);
     }

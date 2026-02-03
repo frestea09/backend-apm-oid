@@ -239,6 +239,15 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Get('vclaim/rujukan/lastsep/norujukan-v2/:norujukan')
+    @ApiOperation({ summary: 'Melihat data detail SEP Terakhir Peserta Berdasarkan Nomor Rujukan (V2 Path)' })
+    @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '12345678' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted last SEP data' })
+    async getLastSepByNoRujukanV2(@Param('norujukan') norujukan: string) {
+        return await this.bpjsService.getLastSepByRujukanV2(norujukan);
+    }
+
+    @ApiTags('VClaim')
     @Get('vclaim/rujukan/:norujukan')
     @ApiOperation({ summary: 'Pencarian data rujukan dari rumah sakit berdasarkan nomor rujukan' })
     @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '12345678' })
