@@ -1458,15 +1458,33 @@ export class BpjsService {
             // User request: "untuk tglSep coba diisi oleh tanggal sekarang untuk ujicoba"
             const tglSep = new Date().toISOString().split('T')[0];
 
-            // 2. Fetch Peserta from BPJS to get Hak Kelas (Important!)
+            // 2. Fetch Peserta from BPJS to get Hak Kelas AND check existing SEP details
             let klsRawatHak = '';
+
+            // Logic improvement: If source data has a reference SEP, fetch it to "carry over" critical fields
+            // that might be missing in local DB (e.g. tujuanKunj, flagProcedure)
+            let existingSepData: any = null;
+            const refSep = data.no_sep_reg || data.no_sep_kontrol;
+
             try {
+                // Fetch Peserta
                 const pesertaRes = await this.getPesertaByNoKartu(noKartu, tglSep);
                 if (pesertaRes?.metaData?.code === '200') {
                     klsRawatHak = pesertaRes.response?.peserta?.hakKelas?.kode || '';
                 }
+
+                // Fetch Existing SEP if available
+                if (refSep) {
+                    // Try V1 endpoint first (clear text/direct mapping) or V2? 
+                    // User suggested V1 gets the correct data.
+                    const sepRes = await this.getSepDetailV1(refSep);
+                    if (sepRes?.metaData?.code === '200' && sepRes?.response) {
+                        existingSepData = sepRes.response;
+                        this.logger.log(`[SEP-SIMRS] Found existing SEP ${refSep}, will use its details.`);
+                    }
+                }
             } catch (e) {
-                this.logger.warn(`[SEP-SIMRS] Failed to fetch peserta info for Hak Kelas: ${e.message}`);
+                this.logger.warn(`[SEP-SIMRS] Failed to fetch supplemental BPJS info: ${e.message}`);
             }
 
             // 3. Construct Payload
@@ -1486,21 +1504,38 @@ export class BpjsService {
             }
 
             // Logic tujuanKunj & skdp
-            // "jika terdapat noSurat dan kodeDPJP di Skdp tujuanKunj set = 2 dan assesmentPel = 5"
-            // "jika tujuanKunj = 0 field nosurat dan KodepDPJP kosongkan saja"
+            // Priority: 
+            // 1. Existing SEP data (if fetched and valid)
+            // 2. Local DB data (Reg/Dummy)
+            // 3. Default logic
+
             let tujuanKunj = data.tujuanKunj || '0';
             let assesmentPel = data.assesmentPel || '';
             let skdpNoSurat = data.no_surat_kontrol || '';
             let skdpKodeDPJP = data.kode_dpjp_dummy || '';
+            let flagProcedure = data.flagProcedure || '';
+            let kdPenunjang = data.kdPenunjang || '';
 
-            if (skdpNoSurat && skdpKodeDPJP) {
+            // Override with Existing SEP data if available
+            if (existingSepData) {
+                if (existingSepData.tujuanKunj?.kode) tujuanKunj = existingSepData.tujuanKunj.kode;
+                if (existingSepData.flagProcedure?.kode) flagProcedure = existingSepData.flagProcedure.kode;
+                if (existingSepData.kdPenunjang?.kode) kdPenunjang = existingSepData.kdPenunjang.kode;
+                if (existingSepData.assestmenPel?.kode) assesmentPel = existingSepData.assestmenPel.kode;
+
+                // If existing SEP implies Kontrol, try to persist SKDP info if local is missing
+                if (tujuanKunj === '2' && existingSepData.kontrol?.noSurat && !skdpNoSurat) {
+                    skdpNoSurat = existingSepData.kontrol.noSurat;
+                    // DPJP might be in existingSepData.kontrol.kdDokter or existingSepData.dpjp.kdDPJP
+                    if (existingSepData.kontrol?.kdDokter && !skdpKodeDPJP) {
+                        skdpKodeDPJP = existingSepData.kontrol.kdDokter;
+                    }
+                }
+            } else if (skdpNoSurat && skdpKodeDPJP) {
+                // Fallback to local DB logic if no existing SEP found
                 tujuanKunj = '2'; // Konsul Dokter (Kontrol)
                 assesmentPel = '5'; // Tujuan Kontrol
             } else {
-                // Should force 0 if no surat kontrol? Usually yes for rujukan baru
-                if (data.no_rujukan_reg || data.no_rujukan_dummy) {
-                    // Keep existing logic or default to 0
-                }
                 tujuanKunj = '0'; // Normal
             }
 
@@ -1553,8 +1588,8 @@ export class BpjsService {
                             }
                         },
                         tujuanKunj: tujuanKunj,
-                        flagProcedure: data.flagProcedure || '',
-                        kdPenunjang: data.kdPenunjang || '',
+                        flagProcedure: flagProcedure,
+                        kdPenunjang: kdPenunjang,
                         assesmentPel: assesmentPel,
                         skdp: {
                             noSurat: skdpNoSurat,
