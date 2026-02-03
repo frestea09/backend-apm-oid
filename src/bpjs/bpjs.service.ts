@@ -1550,6 +1550,10 @@ export class BpjsService {
                 assesmentPel = '';
             }
 
+            // User Request: flagProcedure & kdPenunjang must be empty if 0
+            if (flagProcedure === '0') flagProcedure = '';
+            if (kdPenunjang === '0') kdPenunjang = '';
+
             const payload = {
                 request: {
                     t_sep: {
