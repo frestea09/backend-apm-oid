@@ -1383,47 +1383,13 @@ export class BpjsService {
         }
     }
 
-    async createSepFromSimrs(identifier: string, customTglSep?: string) {
-        const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
-
-        try {
-            // 1. Query Data from SIMRS logic (Complex Query)
-            const query = `
-                SELECT 
-                    r.id as registrasi_id,
-            
-                    -- ... (query truncated for brevity in replacement, assuming it matches existing)
-                    
-            // NOTE: I will use a larger context replacement to ensure the query string isn't messed up if I can't match it all ideally.
-            // Actually, I'll just replace the start of the function and the date assignment part.
-            // But wait, the query lines are many. I should use multi_replace or carefully target the start and the specific line 1463.
-            
-            // Let's restart the strategy. I'll replace the function signature line and the tglSep assignment line.
-    
-    // ... reverting to simple replace strategy for the signature and date ...
-    
-    async createSepFromSimrs(identifier: string, customTglSep?: string) {
-        const queryRunner = this.dataSource.createQueryRunner();
-        await queryRunner.connect();
-
-        try {
-            // ... (lines 1431-1460 remain same) ...
-            
-            // I need to be careful not to delete the query.
-            // I will use multi_replace to target the signature and the date line separately.
-            return; // Abort this tool call to switch to multi_replace
-        }
-    }
-    // Correcting myself: I'll use multi_replace directly in the next step.
-
 
     async createSepFromSimrs(identifier: string, customTglSep?: string) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
 
         try {
-            this.logger.log(`[SEP - SIMRS] Starting creation for identifier: ${ identifier } with User Query`);
+            this.logger.log(`[SEP - SIMRS] Starting creation for identifier: ${identifier} with User Query`);
 
             // 1. Execute Custom User Query Adapted for Search
             const query = `
@@ -1515,11 +1481,11 @@ export class BpjsService {
                     const sepRes = await this.getSepDetailV1(refSep);
                     if (sepRes?.metaData?.code === '200' && sepRes?.response) {
                         existingSepData = sepRes.response;
-                        this.logger.log(`[SEP - SIMRS] Found existing SEP ${ refSep }, will use its details.`);
+                        this.logger.log(`[SEP - SIMRS] Found existing SEP ${refSep}, will use its details.`);
                     }
                 }
             } catch (e) {
-                this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${ e.message } `);
+                this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${e.message} `);
             }
 
             // 3. Construct Payload
@@ -1659,9 +1625,9 @@ export class BpjsService {
             };
 
         } catch (error) {
-            this.logger.error(`[SEP - SIMRS] Error: ${ error.message } `, error.stack);
+            this.logger.error(`[SEP - SIMRS] Error: ${error.message} `, error.stack);
             return {
-                metaData: { code: 500, message: `Internal Error: ${ error.message } ` }
+                metaData: { code: 500, message: `Internal Error: ${error.message} ` }
             };
         } finally {
             await queryRunner.release();
