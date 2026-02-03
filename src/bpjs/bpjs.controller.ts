@@ -679,6 +679,7 @@ export class BpjsController {
             type: 'object',
             properties: {
                 tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' },
+                tglRujukan: { type: 'string', example: '2023-10-20', description: 'Optional: Tanggal Rujukan (YYYY-MM-DD)' },
                 tujuanKunj: { type: 'string', example: '0', description: 'Optional: Tujuan Kunjungan (0: Normal, 1: Prosedur, 2: Konsul Dokter)' },
                 flagProcedure: { type: 'string', example: '', description: 'Optional: Flag Procedure (0: Prosedur Tidak Berkelanjutan, 1: Prosedur Berkelanjutan)' },
                 kdPenunjang: { type: 'string', example: '', description: 'Optional: Kode Penunjang' },

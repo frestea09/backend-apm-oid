@@ -1464,6 +1464,7 @@ export class BpjsService {
             const overrideFlagProcedure = typeof customOptions === 'object' ? customOptions?.flagProcedure : undefined;
             const overrideKdPenunjang = typeof customOptions === 'object' ? customOptions?.kdPenunjang : undefined;
             const overrideAssesmentPel = typeof customOptions === 'object' ? customOptions?.assesmentPel : undefined;
+            const overrideTglRujukan = typeof customOptions === 'object' ? customOptions?.tglRujukan : undefined;
 
             // 2. Fetch Peserta from BPJS to get Hak Kelas AND check existing SEP details
             let klsRawatHak = '';
@@ -1582,7 +1583,7 @@ export class BpjsService {
                         noMR: data.no_mr,
                         rujukan: {
                             asalRujukan: '1',
-                            tglRujukan: formatDate(data.tgl_rujukan),
+                            tglRujukan: (overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || tglSep),
                             noRujukan: data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || '',
                             ppkRujukan: ppkRujukan
                         },
