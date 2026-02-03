@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { BpjsService } from './bpjs.service';
 
 @ApiTags('BPJS')
 @Controller('bpjs')
 export class BpjsController {
+    private readonly logger = new Logger(BpjsController.name);
+
     constructor(private readonly bpjsService: BpjsService) { }
 
     // --- ANTREAN RS ENDPOINTS ---
