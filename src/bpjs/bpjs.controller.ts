@@ -669,7 +669,15 @@ export class BpjsController {
     @ApiOperation({ summary: 'Create SEP from SIMRS Data (Custom SQL Integration)' })
     @ApiParam({ name: 'identifier', description: 'Registrasi ID / No RM / NIK / No Kartu / Kode Booking', example: '849196' })
     @ApiResponse({ status: 200, description: 'Attempted to create SEP' })
-    async createSepFromSimrs(@Param('identifier') identifier: string) {
-        return await this.bpjsService.createSepFromSimrs(identifier);
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' }
+            }
+        }
+    })
+    async createSepFromSimrs(@Param('identifier') identifier: string, @Body() body: { tglSep?: string }) {
+        return await this.bpjsService.createSepFromSimrs(identifier, body?.tglSep);
     }
 }

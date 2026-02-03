@@ -1383,68 +1383,99 @@ export class BpjsService {
         }
     }
 
-    async createSepFromSimrs(identifier: string) {
+    async createSepFromSimrs(identifier: string, customTglSep?: string) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
 
         try {
-            this.logger.log(`[SEP-SIMRS] Starting creation for identifier: ${identifier} with User Query`);
+            // 1. Query Data from SIMRS logic (Complex Query)
+            const query = `
+                SELECT 
+                    r.id as registrasi_id,
+            
+                    -- ... (query truncated for brevity in replacement, assuming it matches existing)
+                    
+            // NOTE: I will use a larger context replacement to ensure the query string isn't messed up if I can't match it all ideally.
+            // Actually, I'll just replace the start of the function and the date assignment part.
+            // But wait, the query lines are many. I should use multi_replace or carefully target the start and the specific line 1463.
+            
+            // Let's restart the strategy. I'll replace the function signature line and the tglSep assignment line.
+    
+    // ... reverting to simple replace strategy for the signature and date ...
+    
+    async createSepFromSimrs(identifier: string, customTglSep?: string) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        try {
+            // ... (lines 1431-1460 remain same) ...
+            
+            // I need to be careful not to delete the query.
+            // I will use multi_replace to target the signature and the date line separately.
+            return; // Abort this tool call to switch to multi_replace
+        }
+    }
+    // Correcting myself: I'll use multi_replace directly in the next step.
+
+
+    async createSepFromSimrs(identifier: string, customTglSep?: string) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+
+        try {
+            this.logger.log(`[SEP - SIMRS] Starting creation for identifier: ${ identifier } with User Query`);
 
             // 1. Execute Custom User Query Adapted for Search
             const query = `
-                SELECT
-                  r.id                          AS registrasi_id,
-                  r.reg_id                      AS reg_id,
-                  r.pasien_id                   AS pasien_id,
+            SELECT
+            r.id as registrasi_id,
+                r.reg_id as reg_id,
+                r.pasien_id as pasien_id,
 
-                  p.no_rm                       AS no_mr,
-                  p.nama                        AS nama_pasien,
-                  p.no_jkn                      AS no_kartu_from_pasiens,
-                  p.nik                         AS nik_pasien,
-                  COALESCE(p.nohp, p.notlp)     AS telp_pasien,
+                p.no_rm as no_mr,
+                p.nama as nama_pasien,
+                p.no_jkn as no_kartu_from_pasiens,
+                p.nik as nik_pasien,
+                COALESCE(p.nohp, p.notlp) as telp_pasien,
 
-                  rd.nomorkartu                 AS no_kartu_from_dummy,
-                  rd.no_hp                      AS telp_from_dummy,
-                  rd.tglperiksa                 AS tgl_periksa,
-                  rd.kode_poli                  AS kode_poli_dummy,
-                  rd.no_rujukan                 AS no_rujukan_dummy,
-                  rd.polieksekutif              AS poli_eksekutif,
-                  rd.kode_dokter                AS kode_dpjp_dummy,
+                rd.nomorkartu as no_kartu_from_dummy,
+                rd.no_hp as telp_from_dummy,
+                rd.tglperiksa as tgl_periksa,
+                rd.kode_poli as kode_poli_dummy,
+                rd.no_rujukan as no_rujukan_dummy,
+                rd.polieksekutif as poli_eksekutif,
+                rd.kode_dokter as kode_dpjp_dummy,
 
-                  r.no_rujukan                  AS no_rujukan_reg,
-                  r.tgl_rujukan                 AS tgl_rujukan,
-                  r.ppk_rujukan                 AS ppk_rujukan,
-                  r.diagnosa_awal               AS diagnosa_awal_reg,
-                  r.no_sep                      AS no_sep_reg,
-                  r.tgl_sep                     AS tgl_sep_reg,
-                  r.poli_bpjs                   AS poli_bpjs,
+                r.no_rujukan as no_rujukan_reg,
+                r.tgl_rujukan as tgl_rujukan,
+                r.ppk_rujukan as ppk_rujukan,
+                r.diagnosa_awal as diagnosa_awal_reg,
+                r.no_sep as no_sep_reg,
+                r.tgl_sep as tgl_sep_reg,
+                r.poli_bpjs as poli_bpjs,
 
-                  bk.no_surat_kontrol           AS no_surat_kontrol,
-                  bk.no_sep                     AS no_sep_kontrol,
-                  bk.no_rujukan                 AS no_rujukan_kontrol,
-                  bk.tujuanKunj                 AS tujuanKunj,
-                  bk.flagProcedure              AS flagProcedure,
-                  bk.kdPenunjang                AS kdPenunjang,
-                  bk.assesmentPel               AS assesmentPel,
-                  bk.diagnosa_awal              AS diagnosa_awal_kontrol,
-                  bk.tgl_rencana_kontrol        AS tgl_rencana_kontrol
+                bk.no_surat_kontrol as no_surat_kontrol,
+                bk.no_sep as no_sep_kontrol,
+                bk.no_rujukan as no_rujukan_kontrol,
+                bk.tujuanKunj as tujuanKunj,
+                bk.flagProcedure as flagProcedure,
+                bk.kdPenunjang as kdPenunjang,
+                bk.assesmentPel as assesmentPel,
+                bk.diagnosa_awal as diagnosa_awal_kontrol,
+                bk.tgl_rencana_kontrol as tgl_rencana_kontrol
 
                 FROM registrasis r
-                JOIN pasiens p
-                  ON p.id = r.pasien_id
-                LEFT JOIN registrasis_dummy rd
-                  ON rd.registrasi_id = r.id
-                LEFT JOIN bpjs_rencana_kontrol bk
-                  ON bk.registrasi_id = r.id
-                  AND bk.pasien_id = p.id
-                WHERE 
-                   CAST(r.id AS CHAR) = ?
-                   OR p.no_rm = ?
-                   OR p.nik = ?
-                   OR p.no_jkn = ?
-                   OR rd.nomorkartu = ?
-                   OR rd.kodebooking = ?
-                ORDER BY r.id DESC
+                JOIN pasiens p ON p.id = r.pasien_id
+                LEFT JOIN registrasis_dummy rd ON rd.registrasi_id = r.id
+                LEFT JOIN bpjs_rencana_kontrol bk ON bk.registrasi_id = r.id AND bk.pasien_id = p.id
+            WHERE
+            CAST(r.id AS CHAR) = ?
+                OR p.no_rm = ?
+                    OR p.nik = ?
+                        OR p.no_jkn = ?
+                            OR rd.nomorkartu = ?
+                                OR rd.kodebooking = ?
+                                    ORDER BY r.id DESC
                 LIMIT 1
             `;
 
@@ -1459,8 +1490,8 @@ export class BpjsService {
 
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
-            // User request: "untuk tglSep coba diisi oleh tanggal sekarang untuk ujicoba"
-            const tglSep = new Date().toISOString().split('T')[0];
+            // User request: optional tglSep input, default to today if not provided
+            const tglSep = customTglSep || new Date().toISOString().split('T')[0];
 
             // 2. Fetch Peserta from BPJS to get Hak Kelas AND check existing SEP details
             let klsRawatHak = '';
@@ -1484,11 +1515,11 @@ export class BpjsService {
                     const sepRes = await this.getSepDetailV1(refSep);
                     if (sepRes?.metaData?.code === '200' && sepRes?.response) {
                         existingSepData = sepRes.response;
-                        this.logger.log(`[SEP-SIMRS] Found existing SEP ${refSep}, will use its details.`);
+                        this.logger.log(`[SEP - SIMRS] Found existing SEP ${ refSep }, will use its details.`);
                     }
                 }
             } catch (e) {
-                this.logger.warn(`[SEP-SIMRS] Failed to fetch supplemental BPJS info: ${e.message}`);
+                this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${ e.message } `);
             }
 
             // 3. Construct Payload
@@ -1628,9 +1659,9 @@ export class BpjsService {
             };
 
         } catch (error) {
-            this.logger.error(`[SEP-SIMRS] Error: ${error.message}`, error.stack);
+            this.logger.error(`[SEP - SIMRS] Error: ${ error.message } `, error.stack);
             return {
-                metaData: { code: 500, message: `Internal Error: ${error.message}` }
+                metaData: { code: 500, message: `Internal Error: ${ error.message } ` }
             };
         } finally {
             await queryRunner.release();
