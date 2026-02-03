@@ -554,7 +554,17 @@ export class BpjsController {
     })
     @ApiResponse({ status: 201, description: 'Success response with decrypted SEP data' })
     async insertSepV2(@Body() body: any) {
-        return await this.bpjsService.insertSepV2(body);
+        try {
+            return await this.bpjsService.insertSepV2(body);
+        } catch (error) {
+            return {
+                metaData: {
+                    code: 500,
+                    message: error.message || 'Internal Server Error',
+                },
+                response: null
+            };
+        }
     }
 
     @ApiTags('VClaim')
