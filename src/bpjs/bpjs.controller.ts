@@ -244,8 +244,29 @@ export class BpjsController {
     @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '12345678' })
     @ApiResponse({ status: 200, description: 'Success response with decrypted last SEP data' })
     async getLastSepByNoRujukanV2(@Param('norujukan') norujukan: string) {
-        return await this.bpjsService.getLastSepByRujukanV2(norujukan);
+        try {
+            return await this.bpjsService.getLastSepByRujukanV2(norujukan);
+        } catch (error) {
+            return {
+                metaData: {
+                    code: 500,
+                    message: error.message || 'Internal Server Error',
+                },
+                response: null
+            };
+        }
     }
+
+    @ApiTags('VClaim')
+    @Get('vclaim/sep/v1/:nosep')
+    @ApiOperation({ summary: 'Melihat data detail SEP Peserta (V1)' })
+    @ApiParam({ name: 'nosep', description: 'Nomor SEP Peserta', example: '1002R0060126V000001' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted SEP data' })
+    async getSepDetailV1(@Param('nosep') nosep: string) {
+        return await this.bpjsService.getSepDetailV1(nosep);
+    }
+
+
 
     @ApiTags('VClaim')
     @Get('vclaim/rujukan/:norujukan')

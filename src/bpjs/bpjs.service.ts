@@ -305,6 +305,10 @@ export class BpjsService {
         return this.makeRequest('vclaim', 'get', `/SEP/2.0/${noSep}`);
     }
 
+    async getSepDetailV1(noSep: string) {
+        return this.makeRequest('vclaim', 'get', `/SEP/${noSep}`);
+    }
+
     async getLastSepByNoRujukan(noRujukan: string) {
         return this.makeRequest('vclaim', 'get', `/Rujukan/RS/LastSEP/NoRujukan/${noRujukan}`);
     }
