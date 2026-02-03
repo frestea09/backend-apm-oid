@@ -678,11 +678,15 @@ export class BpjsController {
         schema: {
             type: 'object',
             properties: {
-                tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' }
+                tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' },
+                tujuanKunj: { type: 'string', example: '0', description: 'Optional: Tujuan Kunjungan (0: Normal, 1: Prosedur, 2: Konsul Dokter)' },
+                flagProcedure: { type: 'string', example: '', description: 'Optional: Flag Procedure (0: Prosedur Tidak Berkelanjutan, 1: Prosedur Berkelanjutan)' },
+                kdPenunjang: { type: 'string', example: '', description: 'Optional: Kode Penunjang' },
+                assesmentPel: { type: 'string', example: '', description: 'Optional: Assesment Pelayanan' },
             }
         }
     })
-    async createSepFromSimrs(@Param('identifier') identifier: string, @Body() body: { tglSep?: string }) {
-        return await this.bpjsService.createSepFromSimrs(identifier, body?.tglSep);
+    async createSepFromSimrs(@Param('identifier') identifier: string, @Body() body: any) {
+        return await this.bpjsService.createSepFromSimrs(identifier, body);
     }
 }

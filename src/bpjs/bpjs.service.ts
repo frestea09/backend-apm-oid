@@ -1384,7 +1384,7 @@ export class BpjsService {
     }
 
 
-    async createSepFromSimrs(identifier: string, customTglSep?: string) {
+    async createSepFromSimrs(identifier: string, customOptions?: any) {
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
 
@@ -1456,8 +1456,14 @@ export class BpjsService {
 
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
-            // User request: optional tglSep input, default to today if not provided
-            const tglSep = customTglSep || new Date().toISOString().split('T')[0];
+
+            // Extract options
+            // Handle legacy usage (if string was passed) though now we control caller
+            const tglSep = (typeof customOptions === 'string' ? customOptions : customOptions?.tglSep) || new Date().toISOString().split('T')[0];
+            const overrideTujuanKunj = typeof customOptions === 'object' ? customOptions?.tujuanKunj : undefined;
+            const overrideFlagProcedure = typeof customOptions === 'object' ? customOptions?.flagProcedure : undefined;
+            const overrideKdPenunjang = typeof customOptions === 'object' ? customOptions?.kdPenunjang : undefined;
+            const overrideAssesmentPel = typeof customOptions === 'object' ? customOptions?.assesmentPel : undefined;
 
             // 2. Fetch Peserta from BPJS to get Hak Kelas AND check existing SEP details
             let klsRawatHak = '';
@@ -1506,12 +1512,16 @@ export class BpjsService {
 
             // Logic tujuanKunj & skdp
             // Priority: 
+            // 0. User Input (from customOptions)
             // 1. Existing SEP data (if fetched and valid)
             // 2. Local DB data (Reg/Dummy)
             // 3. Default logic
 
-            let tujuanKunj = data.tujuanKunj || '0';
+            let tujuanKunj = data.tujuanKunj;
+            let assessPel = data.assesmentPel || ''; // Fix variable name typo in original if any
+            // Note: API field is 'assesmentPel'
             let assesmentPel = data.assesmentPel || '';
+
             let skdpNoSurat = data.no_surat_kontrol || '';
             let skdpKodeDPJP = data.kode_dpjp_dummy || '';
             let flagProcedure = data.flagProcedure || '';
@@ -1527,18 +1537,23 @@ export class BpjsService {
                 // If existing SEP implies Kontrol, try to persist SKDP info if local is missing
                 if (tujuanKunj === '2' && existingSepData.kontrol?.noSurat && !skdpNoSurat) {
                     skdpNoSurat = existingSepData.kontrol.noSurat;
-                    // DPJP might be in existingSepData.kontrol.kdDokter or existingSepData.dpjp.kdDPJP
                     if (existingSepData.kontrol?.kdDokter && !skdpKodeDPJP) {
                         skdpKodeDPJP = existingSepData.kontrol.kdDokter;
                     }
                 }
-            } else if (skdpNoSurat && skdpKodeDPJP) {
-                // Fallback to local DB logic if no existing SEP found
+            } else if (!tujuanKunj && skdpNoSurat && skdpKodeDPJP) {
+                // Fallback to local DB logic if no existing SEP found and no explicit tujuanKunj
                 tujuanKunj = '2'; // Konsul Dokter (Kontrol)
                 assesmentPel = '5'; // Tujuan Kontrol
-            } else {
-                tujuanKunj = '0'; // Normal
             }
+
+            if (!tujuanKunj) tujuanKunj = '0'; // Default Normal
+
+            // Override with User Input (Highest Priority)
+            if (overrideTujuanKunj !== undefined && overrideTujuanKunj !== null) tujuanKunj = overrideTujuanKunj;
+            if (overrideFlagProcedure !== undefined && overrideFlagProcedure !== null) flagProcedure = overrideFlagProcedure;
+            if (overrideKdPenunjang !== undefined && overrideKdPenunjang !== null) kdPenunjang = overrideKdPenunjang;
+            if (overrideAssesmentPel !== undefined && overrideAssesmentPel !== null) assesmentPel = overrideAssesmentPel;
 
             // Clean up if tujuanKunj is 0
             if (tujuanKunj === '0') {
