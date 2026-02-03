@@ -304,6 +304,13 @@ export class BpjsService {
     async getSepDetail(noSep: string) {
         return this.makeRequest('vclaim', 'get', `/SEP/2.0/${noSep}`);
     }
+    async getRencanaKontrolByNoKartu(bulan: string, tahun: string, noKartu: string, filter: string) {
+        return this.makeRequest(
+            'vclaim',
+            'get',
+            `/RencanaKontrol/ListRencanaKontrol/Bulan/${bulan}/Tahun/${tahun}/Nokartu/${noKartu}/filter/${filter}`
+        );
+    }
 
     async getSepDetailV1(noSep: string) {
         return this.makeRequest('vclaim', 'get', `/SEP/${noSep}`);

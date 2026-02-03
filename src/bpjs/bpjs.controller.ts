@@ -268,6 +268,22 @@ export class BpjsController {
         return await this.bpjsService.getSepDetailV1(nosep);
     }
 
+    @ApiTags('VClaim')
+    @Get('vclaim/rencanakontrol/list/bulan/:bulan/tahun/:tahun/nokartu/:nokartu/filter/:filter')
+    @ApiOperation({ summary: 'Data Rencana Kontrol berdasarkan nomor kartu' })
+    @ApiParam({ name: 'bulan', description: 'Bulan (MM)', example: '01' })
+    @ApiParam({ name: 'tahun', description: 'Tahun (YYYY)', example: '2022' })
+    @ApiParam({ name: 'nokartu', description: 'Nomor Kartu Peserta', example: '0002035874204' })
+    @ApiParam({ name: 'filter', description: 'Filter (1=tanggal entri, 2=tanggal rencana kontrol)', example: '1' })
+    @ApiResponse({ status: 200, description: 'Success response with decrypted rencana kontrol list data' })
+    async getRencanaKontrolByNoKartu(
+        @Param('bulan') bulan: string,
+        @Param('tahun') tahun: string,
+        @Param('nokartu') nokartu: string,
+        @Param('filter') filter: string,
+    ) {
+        return await this.bpjsService.getRencanaKontrolByNoKartu(bulan, tahun, nokartu, filter);
+    }
 
 
     @ApiTags('VClaim')
