@@ -579,18 +579,21 @@ export class BpjsController {
     })
     @ApiResponse({ status: 201, description: 'Success response with decrypted SEP data' })
     async insertSepV2(@Body() body: any) {
+        this.logger.log(`[BPJS Controller] insertSepV2 called. Body: ${JSON.stringify(body)}`);
         try {
             return await this.bpjsService.insertSepV2(body);
         } catch (error) {
+            this.logger.error(`[BPJS Controller] Error in insertSepV2: ${error.message}`, error.stack);
             return {
                 metaData: {
                     code: 500,
-                    message: error.message || 'Internal Server Error',
+                    message: `Internal Server Error (Handled): ${error.message}`,
                 },
                 response: null
             };
         }
     }
+
 
     @ApiTags('VClaim')
     @Post('vclaim/sep/cekin-insert')
