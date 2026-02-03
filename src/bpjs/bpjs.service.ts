@@ -345,6 +345,10 @@ export class BpjsService {
         return this.makeRequest('pcare', 'get', `/kunjungan/peserta/${noKartu}`);
     }
 
+    async getHistoriPelayanan(noKartu: string, tglMulai: string, tglAkhir: string) {
+        return this.makeRequest('vclaim', 'get', `/monitoring/HistoriPelayanan/NoKartu/${noKartu}/tglMulai/${tglMulai}/tglAkhir/${tglAkhir}`);
+    }
+
     async checkRujukanExpiry(noRujukan: string, targetDate?: string) {
         try {
             const tglPeriksa = targetDate || new Date().toISOString().split('T')[0];

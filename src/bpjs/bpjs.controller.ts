@@ -336,6 +336,31 @@ export class BpjsController {
     }
 
     @ApiTags('VClaim')
+    @Get('vclaim/monitoring/histori-pelayanan/nokartu/:nokartu/tglmulai/:tglmulai/tglakhir/:tglakhir')
+    @ApiOperation({ summary: 'Melihat Data Histori Pelayanan Peserta' })
+    @ApiParam({ name: 'nokartu', description: 'Nomor Kartu Peserta', example: '0001234567890' })
+    @ApiParam({ name: 'tglmulai', description: 'Tanggal Mulai (YYYY-MM-DD)', example: '2023-01-01' })
+    @ApiParam({ name: 'tglakhir', description: 'Tanggal Akhir (YYYY-MM-DD)', example: '2023-12-31' })
+    @ApiResponse({ status: 200, description: 'Success response with confirmed service history' })
+    async getHistoriPelayanan(
+        @Param('nokartu') nokartu: string,
+        @Param('tglmulai') tglmulai: string,
+        @Param('tglakhir') tglakhir: string,
+    ) {
+        try {
+            return await this.bpjsService.getHistoriPelayanan(nokartu, tglmulai, tglakhir);
+        } catch (error) {
+            return {
+                metaData: {
+                    code: 500,
+                    message: error.message || 'Internal Server Error',
+                },
+                response: null
+            };
+        }
+    }
+
+    @ApiTags('VClaim')
     @Get('vclaim/rujukan/check-expiry/:norujukan')
     @ApiOperation({ summary: 'Check Rujukan Expiry / Validity' })
     @ApiParam({ name: 'norujukan', description: 'Nomor Rujukan', example: '0114U1630316Y000003' })
