@@ -1595,6 +1595,12 @@ export class BpjsService {
             // User Request: flagProcedure & kdPenunjang must be empty if 0
             if (flagProcedure === '0') flagProcedure = '';
             if (kdPenunjang === '0') kdPenunjang = '';
+            const dpjpLayanValue =
+                overrideDpjpLayan ??
+                skdpKodeDPJP ??
+                data.kode_dpjp_dummy ??
+                existingSepData?.dpjp?.kode ??
+                '';
 
             const payload = {
                 request: {
@@ -1657,7 +1663,7 @@ export class BpjsService {
                             noSurat: skdpNoSurat,
                             kodeDPJP: skdpKodeDPJP
                         },
-                        // dpjpLayan: overrideDpjpLayan ?? (data.kode_dpjp_dummy || ''),
+                        dpjpLayan: dpjpLayanValue || undefined,
                         noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || ''),
                         user: overrideUser ?? 'APM-SIMRS-V2'
 
