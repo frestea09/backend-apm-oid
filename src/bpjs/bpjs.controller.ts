@@ -695,8 +695,7 @@ export class BpjsController {
             type: 'object',
             properties: {
                 noKartu: { type: 'string', example: '0002962594451', description: 'Optional: Override No Kartu BPJS' },
-                tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' },
-                ppkPelayanan: { type: 'string', example: '1002R006', description: 'Optional: Override PPK Pelayanan' },
+                tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD). Default from DB or today if empty.' }, ppkPelayanan: { type: 'string', example: '1002R006', description: 'Optional: Override PPK Pelayanan' },
                 jnsPelayanan: { type: 'string', example: '2', description: 'Optional: Jenis Pelayanan (1: R.Inap, 2: R.Jalan)' },
                 klsRawat: {
                     type: 'object',
@@ -767,11 +766,11 @@ export class BpjsController {
                         }
                     }
                 },
-                tglRujukan: { type: 'string', example: '2023-10-20', description: 'Optional: Tanggal Rujukan (YYYY-MM-DD)' },
-                tujuanKunj: { type: 'string', example: '0', description: 'Optional: Tujuan Kunjungan (0: Normal, 1: Prosedur, 2: Konsul Dokter)' },
-                flagProcedure: { type: 'string', example: '', description: 'Optional: Flag Procedure (0: Prosedur Tidak Berkelanjutan, 1: Prosedur Berkelanjutan)' },
-                kdPenunjang: { type: 'string', example: '', description: 'Optional: Kode Penunjang' },
-                assesmentPel: { type: 'string', example: '', description: 'Optional: Assesment Pelayanan' },
+                tglRujukan: { type: 'string', example: '2023-10-20', description: 'Optional: Tanggal Rujukan (YYYY-MM-DD). Default from DB or tglSep if empty.' },
+                tujuanKunj: { type: 'string', example: '0', description: 'Optional: Tujuan Kunjungan (0: Normal, 1: Prosedur, 2: Konsul Dokter). Default from DB/SEP if empty.' },
+                flagProcedure: { type: 'string', example: '', description: 'Optional: Flag Procedure (0: Prosedur Tidak Berkelanjutan, 1: Prosedur Berkelanjutan). Default from DB/SEP if empty.' },
+                kdPenunjang: { type: 'string', example: '', description: 'Optional: Kode Penunjang. Default from DB/SEP if empty.' },
+                assesmentPel: { type: 'string', example: '', description: 'Optional: Assesment Pelayanan. Default from DB/SEP if empty.' },
                 skdp: {
                     type: 'object',
                     properties: {
