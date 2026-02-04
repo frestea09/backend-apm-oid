@@ -1464,13 +1464,10 @@ export class BpjsService {
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
             // Helper to format date YYYY-MM-DD
-            const formatDate = (date: any, timeZone = 'Asia/Jakarta') => {
+            const formatDate = (date: any) => {
                 if (!date) return '';
-                const parsed = date instanceof Date ? date : new Date(date);
-                if (Number.isNaN(parsed.getTime())) {
-                    return date.toString().split('T')[0];
-                }
-                return new Intl.DateTimeFormat('en-CA', { timeZone }).format(parsed);
+                if (date instanceof Date) return date.toISOString().split('T')[0];
+                return date.toString().split('T')[0];
             };
 
 
