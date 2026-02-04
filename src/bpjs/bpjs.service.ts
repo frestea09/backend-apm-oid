@@ -1464,7 +1464,7 @@ export class BpjsService {
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
             // Helper to format date YYYY-MM-DD
-            const formatDateDua = (date: any) => {
+            const formatDate = (date: any) => {
                 if (!date) return '';
                 if (date instanceof Date) return date.toISOString().split('T')[0];
                 return date.toString().split('T')[0];
@@ -1475,7 +1475,7 @@ export class BpjsService {
             // Handle legacy usage (if string was passed) though now we control caller
             const tglSep =
                 (typeof customOptions === 'string' ? customOptions : customOptions?.tglSep) ||
-                formatDateDua(data.tgl_sep_reg || data.tgl_periksa) ||
+                formatDate(data.tgl_sep_reg || data.tgl_periksa) ||
                 new Date().toISOString().split('T')[0];
             const overrideNoKartu = typeof customOptions === 'object' ? customOptions?.noKartu : undefined;
             const overridePpkPelayanan = typeof customOptions === 'object' ? customOptions?.ppkPelayanan : undefined;
