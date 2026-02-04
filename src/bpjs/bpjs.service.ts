@@ -1470,6 +1470,15 @@ export class BpjsService {
                 return date.toString().split('T')[0];
             };
 
+            // Helper to format date YYYY-MM-DD
+            const formatDateDua = (date: any, timeZone = 'Asia/Jakarta') => {
+                if (!date) return '';
+                const parsed = date instanceof Date ? date : new Date(date);
+                if (Number.isNaN(parsed.getTime())) {
+                    return date.toString().split('T')[0];
+                }
+                return new Intl.DateTimeFormat('en-CA', { timeZone }).format(parsed);
+            };
 
             // Extract options
             // Handle legacy usage (if string was passed) though now we control caller
@@ -1662,7 +1671,7 @@ export class BpjsService {
                         noMR: overrideNoMR ?? data.no_mr,
                         rujukan: {
                             asalRujukan: overrideRujukan?.asalRujukan ?? '1',
-                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || formatDate(rujukanData?.tglKunjungan) || tglSep)),
+                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDateDua(data.tgl_rujukan) || formatDateDua(rujukanData?.tglKunjungan) || tglSep)),
                             noRujukan: overrideRujukan?.noRujukan ?? (data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || rujukanData?.noKunjungan || ''),
                             ppkRujukan: overrideRujukan?.ppkRujukan ?? (ppkRujukan || rujukanData?.provPerujuk?.kode || '')
                         },
