@@ -1657,7 +1657,7 @@ export class BpjsService {
                             noSurat: skdpNoSurat,
                             kodeDPJP: skdpKodeDPJP
                         },
-                        dpjpLayan: overrideDpjpLayan ?? (data.kode_dpjp_dummy || ''),
+                        // dpjpLayan: overrideDpjpLayan ?? (data.kode_dpjp_dummy || ''),
                         noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || ''),
                         user: overrideUser ?? 'APM-SIMRS-V2'
 
