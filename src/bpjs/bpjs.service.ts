@@ -1467,6 +1467,22 @@ export class BpjsService {
             // Extract options
             // Handle legacy usage (if string was passed) though now we control caller
             const tglSep = (typeof customOptions === 'string' ? customOptions : customOptions?.tglSep) || new Date().toISOString().split('T')[0];
+            const overrideNoKartu = typeof customOptions === 'object' ? customOptions?.noKartu : undefined;
+            const overridePpkPelayanan = typeof customOptions === 'object' ? customOptions?.ppkPelayanan : undefined;
+            const overrideJnsPelayanan = typeof customOptions === 'object' ? customOptions?.jnsPelayanan : undefined;
+            const overrideKlsRawat = typeof customOptions === 'object' ? customOptions?.klsRawat : undefined;
+            const overrideNoMR = typeof customOptions === 'object' ? customOptions?.noMR : undefined;
+            const overrideRujukan = typeof customOptions === 'object' ? customOptions?.rujukan : undefined;
+            const overrideCatatan = typeof customOptions === 'object' ? customOptions?.catatan : undefined;
+            const overrideDiagAwal = typeof customOptions === 'object' ? customOptions?.diagAwal : undefined;
+            const overridePoli = typeof customOptions === 'object' ? customOptions?.poli : undefined;
+            const overrideCob = typeof customOptions === 'object' ? customOptions?.cob : undefined;
+            const overrideKatarak = typeof customOptions === 'object' ? customOptions?.katarak : undefined;
+            const overrideJaminan = typeof customOptions === 'object' ? customOptions?.jaminan : undefined;
+            const overrideSkdp = typeof customOptions === 'object' ? customOptions?.skdp : undefined;
+            const overrideDpjpLayan = typeof customOptions === 'object' ? customOptions?.dpjpLayan : undefined;
+            const overrideNoTelp = typeof customOptions === 'object' ? customOptions?.noTelp : undefined;
+            const overrideUser = typeof customOptions === 'object' ? customOptions?.user : undefined;
             const overrideTujuanKunj = typeof customOptions === 'object' ? customOptions?.tujuanKunj : undefined;
             const overrideFlagProcedure = typeof customOptions === 'object' ? customOptions?.flagProcedure : undefined;
             const overrideKdPenunjang = typeof customOptions === 'object' ? customOptions?.kdPenunjang : undefined;
@@ -1562,6 +1578,8 @@ export class BpjsService {
             if (overrideFlagProcedure !== undefined && overrideFlagProcedure !== null) flagProcedure = overrideFlagProcedure;
             if (overrideKdPenunjang !== undefined && overrideKdPenunjang !== null) kdPenunjang = overrideKdPenunjang;
             if (overrideAssesmentPel !== undefined && overrideAssesmentPel !== null) assesmentPel = overrideAssesmentPel;
+            if (overrideSkdp?.noSurat !== undefined && overrideSkdp?.noSurat !== null) skdpNoSurat = overrideSkdp.noSurat;
+            if (overrideSkdp?.kodeDPJP !== undefined && overrideSkdp?.kodeDPJP !== null) skdpKodeDPJP = overrideSkdp.kodeDPJP;
 
             // Clean up if tujuanKunj is 0
             if (tujuanKunj === '0') {
@@ -1577,41 +1595,51 @@ export class BpjsService {
             const payload = {
                 request: {
                     t_sep: {
-                        noKartu: noKartu,
+                        noKartu: overrideNoKartu ?? noKartu,
                         tglSep: tglSep,
-                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011',
-                        jnsPelayanan: '2',
+                        ppkPelayanan: overridePpkPelayanan ?? (this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011'),
+                        jnsPelayanan: overrideJnsPelayanan ?? '2',
+
                         klsRawat: {
-                            klsRawatHak: klsRawatHak || '3',
-                            klsRawatNaik: '',
-                            pembiayaan: '',
-                            penanggungJawab: ''
+                            klsRawatHak: overrideKlsRawat?.klsRawatHak ?? (klsRawatHak || '3'),
+                            klsRawatNaik: overrideKlsRawat?.klsRawatNaik ?? '',
+                            pembiayaan: overrideKlsRawat?.pembiayaan ?? '',
+                            penanggungJawab: overrideKlsRawat?.penanggungJawab ?? ''
                         },
-                        noMR: data.no_mr,
+                        noMR: overrideNoMR ?? data.no_mr,
                         rujukan: {
-                            asalRujukan: '1',
-                            tglRujukan: (overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || tglSep),
-                            noRujukan: data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || '',
-                            ppkRujukan: ppkRujukan
+                            asalRujukan: overrideRujukan?.asalRujukan ?? '1',
+                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || tglSep)),
+                            noRujukan: overrideRujukan?.noRujukan ?? (data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || ''),
+                            ppkRujukan: overrideRujukan?.ppkRujukan ?? ppkRujukan
                         },
-                        catatan: 'SEP Created via SIMRS Integration',
-                        diagAwal: data.diagnosa_awal_reg || data.diagnosa_awal_kontrol || '',
+                        catatan: overrideCatatan ?? 'SEP Created via SIMRS Integration',
+                        diagAwal: overrideDiagAwal ?? (data.diagnosa_awal_reg || data.diagnosa_awal_kontrol || ''),
+
                         poli: {
-                            tujuan: data.kode_poli_dummy || data.poli_bpjs || '',
-                            eksekutif: data.poli_eksekutif || '0'
+                            tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || ''),
+                            eksekutif: overridePoli?.eksekutif ?? (data.poli_eksekutif || '0')
+
                         },
-                        cob: { cob: '0' },
-                        katarak: { katarak: '0' },
+                        cob: {
+                            cob: overrideCob?.cob ?? '0'
+                        },
+                        katarak: {
+                            katarak: overrideKatarak?.katarak ?? '0'
+                        },
                         jaminan: {
-                            lakaLantas: '0',
-                            noLP: '',
+                            lakaLantas: overrideJaminan?.lakaLantas ?? '0',
+                            noLP: overrideJaminan?.noLP ?? '',
+
                             penjamin: {
-                                tglKejadian: '',
-                                keterangan: '',
-                                suplesi: {
-                                    suplesi: '0',
-                                    noSepSuplesi: '',
-                                    lokasiLaka: { kdPropinsi: '', kdKabupaten: '', kdKecamatan: '' }
+                                tglKejadian: overrideJaminan?.penjamin?.tglKejadian ?? '',
+                                keterangan: overrideJaminan?.penjamin?.keterangan ?? '',
+                                suplesi: overrideJaminan?.penjamin?.suplesi?.suplesi ?? '0',
+                                noSepSuplesi: overrideJaminan?.penjamin?.suplesi?.noSepSuplesi ?? '',
+                                lokasiLaka: {
+                                    kdPropinsi: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdPropinsi ?? '',
+                                    kdKabupaten: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKabupaten ?? '',
+                                    kdKecamatan: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKecamatan ?? ''
                                 }
                             }
                         },
@@ -1623,9 +1651,11 @@ export class BpjsService {
                             noSurat: skdpNoSurat,
                             kodeDPJP: skdpKodeDPJP
                         },
-                        dpjpLayan: data.kode_dpjp_dummy || '',
-                        noTelp: data.telp_from_dummy || data.telp_pasien || '',
-                        user: 'APM-SIMRS-V2'
+                        dpjpLayan: overrideDpjpLayan ?? (data.kode_dpjp_dummy || ''),
+                        noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || ''),
+                        user: overrideUser ?? 'APM-SIMRS-V2'
+
+
                     }
                 }
             };

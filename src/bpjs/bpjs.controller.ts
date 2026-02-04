@@ -694,12 +694,95 @@ export class BpjsController {
         schema: {
             type: 'object',
             properties: {
+                noKartu: { type: 'string', example: '0002962594451', description: 'Optional: Override No Kartu BPJS' },
                 tglSep: { type: 'string', example: '2023-10-27', description: 'Optional: Tanggal SEP (YYYY-MM-DD)' },
+                ppkPelayanan: { type: 'string', example: '1002R006', description: 'Optional: Override PPK Pelayanan' },
+                jnsPelayanan: { type: 'string', example: '2', description: 'Optional: Jenis Pelayanan (1: R.Inap, 2: R.Jalan)' },
+                klsRawat: {
+                    type: 'object',
+                    properties: {
+                        klsRawatHak: { type: 'string', example: '3' },
+                        klsRawatNaik: { type: 'string', example: '' },
+                        pembiayaan: { type: 'string', example: '' },
+                        penanggungJawab: { type: 'string', example: '' }
+                    }
+                },
+                noMR: { type: 'string', example: '767925', description: 'Optional: Override No MR' },
+                rujukan: {
+                    type: 'object',
+                    properties: {
+                        asalRujukan: { type: 'string', example: '1' },
+                        tglRujukan: { type: 'string', example: '2025-11-23' },
+                        noRujukan: { type: 'string', example: '100209021125Y001341' },
+                        ppkRujukan: { type: 'string', example: '10020902' }
+                    }
+                },
+                catatan: { type: 'string', example: 'SEP Created via SIMRS Integration' },
+                diagAwal: { type: 'string', example: 'O99.8' },
+                poli: {
+                    type: 'object',
+                    properties: {
+                        tujuan: { type: 'string', example: 'OBG' },
+                        eksekutif: { type: 'string', example: '0' }
+                    }
+                },
+                cob: {
+                    type: 'object',
+                    properties: {
+                        cob: { type: 'string', example: '0' }
+                    }
+                },
+                katarak: {
+                    type: 'object',
+                    properties: {
+                        katarak: { type: 'string', example: '0' }
+                    }
+                },
+                jaminan: {
+                    type: 'object',
+                    properties: {
+                        lakaLantas: { type: 'string', example: '0' },
+                        noLP: { type: 'string', example: '' },
+                        penjamin: {
+                            type: 'object',
+                            properties: {
+                                tglKejadian: { type: 'string', example: '' },
+                                keterangan: { type: 'string', example: '' },
+                                suplesi: {
+                                    type: 'object',
+                                    properties: {
+                                        suplesi: { type: 'string', example: '0' },
+                                        noSepSuplesi: { type: 'string', example: '' },
+                                        lokasiLaka: {
+                                            type: 'object',
+                                            properties: {
+                                                kdPropinsi: { type: 'string', example: '' },
+                                                kdKabupaten: { type: 'string', example: '' },
+                                                kdKecamatan: { type: 'string', example: '' }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 tglRujukan: { type: 'string', example: '2023-10-20', description: 'Optional: Tanggal Rujukan (YYYY-MM-DD)' },
                 tujuanKunj: { type: 'string', example: '0', description: 'Optional: Tujuan Kunjungan (0: Normal, 1: Prosedur, 2: Konsul Dokter)' },
                 flagProcedure: { type: 'string', example: '', description: 'Optional: Flag Procedure (0: Prosedur Tidak Berkelanjutan, 1: Prosedur Berkelanjutan)' },
                 kdPenunjang: { type: 'string', example: '', description: 'Optional: Kode Penunjang' },
                 assesmentPel: { type: 'string', example: '', description: 'Optional: Assesment Pelayanan' },
+                skdp: {
+                    type: 'object',
+                    properties: {
+                        noSurat: { type: 'string', example: '1002R0060226K000501' },
+                        kodeDPJP: { type: 'string', example: '282345' }
+                    }
+                },
+                dpjpLayan: { type: 'string', example: '282345' },
+                noTelp: { type: 'string', example: '082116373587' },
+                user: { type: 'string', example: 'APM-SIMRS-V2' },
+
             }
         }
     })
