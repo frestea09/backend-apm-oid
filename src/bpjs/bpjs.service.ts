@@ -1666,8 +1666,6 @@ export class BpjsService {
                         dpjpLayan: dpjpLayanValue || undefined,
                         noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || ''),
                         user: overrideUser ?? 'APM-SIMRS-V2'
-
-
                     }
                 }
             };
