@@ -1539,7 +1539,6 @@ export class BpjsService {
                         this.logger.log(`[SEP - SIMRS] Found rujukan for ${noKartu}, will use its details if needed.`);
                     }
                 }
-
             } catch (e) {
                 this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${e.message} `);
             }
@@ -1619,6 +1618,32 @@ export class BpjsService {
                 existingSepData?.dpjp?.kode ??
                 '';
 
+            const diagAwalValue =
+                overrideDiagAwal ??
+                data.diagnosa_awal_reg ??
+                data.diagnosa_awal_kontrol ??
+                rujukanData?.diagnosa?.kode ??
+                '';
+
+            const poliTujuanValue =
+                overridePoli?.tujuan ??
+                data.kode_poli_dummy ??
+                data.poli_bpjs ??
+                rujukanData?.poliRujukan?.kode ??
+                '';
+
+            if (!diagAwalValue) {
+                return {
+                    metaData: { code: 400, message: 'DiagAwal wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
+            if (!poliTujuanValue) {
+                return {
+                    metaData: { code: 400, message: 'Poli tujuan wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
 
 
             const payload = {
@@ -1642,11 +1667,11 @@ export class BpjsService {
                             ppkRujukan: overrideRujukan?.ppkRujukan ?? (ppkRujukan || rujukanData?.provPerujuk?.kode || '')
                         },
                         catatan: overrideCatatan ?? 'SEP Created via SIMRS Integration',
+                        diagAwal: diagAwalValue,
                         tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || rujukanData?.poliRujukan?.kode || ''),
                         poli: {
-                            tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || ''),
+                            tujuan: poliTujuanValue,
                             eksekutif: overridePoli?.eksekutif ?? (data.poli_eksekutif || '0')
-
                         },
                         cob: {
                             cob: overrideCob?.cob ?? '0'
