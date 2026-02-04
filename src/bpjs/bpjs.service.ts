@@ -1501,7 +1501,7 @@ export class BpjsService {
 
             // 2. Fetch Peserta from BPJS to get Hak Kelas AND check existing SEP details
             let klsRawatHak = '';
-
+            let rujukanData: any = null;
             // Logic improvement: If source data has a reference SEP, fetch it to "carry over" critical fields
             // that might be missing in local DB (e.g. tujuanKunj, flagProcedure)
             let existingSepData: any = null;
@@ -1524,6 +1524,22 @@ export class BpjsService {
                         this.logger.log(`[SEP - SIMRS] Found existing SEP ${refSep}, will use its details.`);
                     }
                 }
+                const needsRujukanFallback =
+                    !data.no_rujukan_reg &&
+                    !data.no_rujukan_dummy &&
+                    !data.no_rujukan_kontrol ||
+                    !data.tgl_rujukan ||
+                    (!data.diagnosa_awal_reg && !data.diagnosa_awal_kontrol) ||
+                    (!data.kode_poli_dummy && !data.poli_bpjs);
+
+                if (needsRujukanFallback) {
+                    const rujukanRes = await this.getRujukanByNoKartu(noKartu);
+                    if (rujukanRes?.metaData?.code === '200' && rujukanRes?.response?.rujukan) {
+                        rujukanData = rujukanRes.response.rujukan;
+                        this.logger.log(`[SEP - SIMRS] Found rujukan for ${noKartu}, will use its details if needed.`);
+                    }
+                }
+
             } catch (e) {
                 this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${e.message} `);
             }
@@ -1596,14 +1612,22 @@ export class BpjsService {
             if (flagProcedure === '0') flagProcedure = '';
             if (kdPenunjang === '0') kdPenunjang = '';
 
+            const dpjpLayanValue =
+                overrideDpjpLayan ??
+                skdpKodeDPJP ??
+                data.kode_dpjp_dummy ??
+                existingSepData?.dpjp?.kode ??
+                '';
+
+
+
             const payload = {
                 request: {
                     t_sep: {
                         noKartu: overrideNoKartu ?? noKartu,
                         tglSep: tglSep,
                         ppkPelayanan: overridePpkPelayanan ?? (this.configService.get('VCLAIM_PPK_LAYANAN') || '0301R011'),
-                        jnsPelayanan: overrideJnsPelayanan ?? '2',
-
+                        jnsPelayanan: overrideJnsPelayanan ?? rujukanData?.pelayanan?.kode ?? '2',
                         klsRawat: {
                             klsRawatHak: overrideKlsRawat?.klsRawatHak ?? (klsRawatHak || '3'),
                             klsRawatNaik: overrideKlsRawat?.klsRawatNaik ?? '',
@@ -1613,13 +1637,12 @@ export class BpjsService {
                         noMR: overrideNoMR ?? data.no_mr,
                         rujukan: {
                             asalRujukan: overrideRujukan?.asalRujukan ?? '1',
-                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || tglSep)),
-                            noRujukan: overrideRujukan?.noRujukan ?? (data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || ''),
-                            ppkRujukan: overrideRujukan?.ppkRujukan ?? ppkRujukan
+                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDate(data.tgl_rujukan) || formatDate(rujukanData?.tglKunjungan) || tglSep)),
+                            noRujukan: overrideRujukan?.noRujukan ?? (data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || rujukanData?.noKunjungan || ''),
+                            ppkRujukan: overrideRujukan?.ppkRujukan ?? (ppkRujukan || rujukanData?.provPerujuk?.kode || '')
                         },
                         catatan: overrideCatatan ?? 'SEP Created via SIMRS Integration',
-                        diagAwal: overrideDiagAwal ?? (data.diagnosa_awal_reg || data.diagnosa_awal_kontrol || ''),
-
+                        tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || rujukanData?.poliRujukan?.kode || ''),
                         poli: {
                             tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || ''),
                             eksekutif: overridePoli?.eksekutif ?? (data.poli_eksekutif || '0')
@@ -1658,7 +1681,8 @@ export class BpjsService {
                             kodeDPJP: skdpKodeDPJP
                         },
                         // dpjpLayan: overrideDpjpLayan ?? (data.kode_dpjp_dummy || '')
-                        noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || ''),
+                        dpjpLayan: dpjpLayanValue || undefined,
+                        noTelp: overrideNoTelp ?? (data.telp_from_dummy || data.telp_pasien || rujukanData?.peserta?.mr?.noTelepon || ''),
                         user: overrideUser ?? 'APM-SIMRS-V2'
 
 
