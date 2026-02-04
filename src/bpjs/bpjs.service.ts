@@ -1463,10 +1463,20 @@ export class BpjsService {
 
             const data = results[0];
             const noKartu = data.no_kartu_from_dummy || data.no_kartu_from_pasiens;
+            // Helper to format date YYYY-MM-DD
+            const formatDateDua = (date: any) => {
+                if (!date) return '';
+                if (date instanceof Date) return date.toISOString().split('T')[0];
+                return date.toString().split('T')[0];
+            };
+
 
             // Extract options
             // Handle legacy usage (if string was passed) though now we control caller
-            const tglSep = (typeof customOptions === 'string' ? customOptions : customOptions?.tglSep) || new Date().toISOString().split('T')[0];
+            const tglSep =
+                (typeof customOptions === 'string' ? customOptions : customOptions?.tglSep) ||
+                formatDateDua(data.tgl_sep_reg || data.tgl_periksa) ||
+                new Date().toISOString().split('T')[0];
             const overrideNoKartu = typeof customOptions === 'object' ? customOptions?.noKartu : undefined;
             const overridePpkPelayanan = typeof customOptions === 'object' ? customOptions?.ppkPelayanan : undefined;
             const overrideJnsPelayanan = typeof customOptions === 'object' ? customOptions?.jnsPelayanan : undefined;
@@ -1521,12 +1531,6 @@ export class BpjsService {
             // 3. Construct Payload
             // Prioritize Dummy/Reg data, fallbacks to defaults
 
-            // Helper to format date YYYY-MM-DD
-            const formatDate = (date: any) => {
-                if (!date) return '';
-                if (date instanceof Date) return date.toISOString().split('T')[0];
-                return date.toString().split('T')[0];
-            };
 
             // Fix ppkRujukan (remove name if pipe exists)
             let ppkRujukan = data.ppk_rujukan || '';
