@@ -1638,12 +1638,14 @@ export class BpjsService {
                             penjamin: {
                                 tglKejadian: overrideJaminan?.penjamin?.tglKejadian ?? '',
                                 keterangan: overrideJaminan?.penjamin?.keterangan ?? '',
-                                suplesi: overrideJaminan?.penjamin?.suplesi?.suplesi ?? '0',
-                                noSepSuplesi: overrideJaminan?.penjamin?.suplesi?.noSepSuplesi ?? '',
-                                lokasiLaka: {
-                                    kdPropinsi: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdPropinsi ?? '',
-                                    kdKabupaten: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKabupaten ?? '',
-                                    kdKecamatan: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKecamatan ?? ''
+                                suplesi: {
+                                    suplesi: overrideJaminan?.penjamin?.suplesi?.suplesi ?? '0',
+                                    noSepSuplesi: overrideJaminan?.penjamin?.suplesi?.noSepSuplesi ?? '',
+                                    lokasiLaka: {
+                                        kdPropinsi: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdPropinsi ?? '',
+                                        kdKabupaten: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKabupaten ?? '',
+                                        kdKecamatan: overrideJaminan?.penjamin?.suplesi?.lokasiLaka?.kdKecamatan ?? ''
+                                    }
                                 }
                             }
                         },
