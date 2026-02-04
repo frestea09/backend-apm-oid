@@ -1314,6 +1314,39 @@ export class BpjsService {
             if (!assesmentPel && tujuanKunj === '0' && rujukan && reqPoli && reqPoli !== rujukan.poliRujukan?.kode) {
                 assesmentPel = '2'; // Cross-poli detection
             }
+            const dpjpLayanValue =
+                overrideDpjpLayan ??
+                skdpKodeDPJP ??
+                data.kode_dpjp_dummy ??
+                existingSepData?.dpjp?.kode ??
+                '';
+
+            const diagAwalValue =
+                overrideDiagAwal ??
+                data.diagnosa_awal_reg ??
+                data.diagnosa_awal_kontrol ??
+                rujukanData?.diagnosa?.kode ??
+                '';
+
+            const poliTujuanValue =
+                overridePoli?.tujuan ??
+                data.kode_poli_dummy ??
+                data.poli_bpjs ??
+                rujukanData?.poliRujukan?.kode ??
+                '';
+
+            if (!diagAwalValue) {
+                return {
+                    metaData: { code: 400, message: 'DiagAwal wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
+            if (!poliTujuanValue) {
+                return {
+                    metaData: { code: 400, message: 'Poli tujuan wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
 
             // Construct VClaim 2.0 Payload
             const payload = {
@@ -1540,6 +1573,7 @@ export class BpjsService {
                     }
                 }
 
+
             } catch (e) {
                 this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${e.message} `);
             }
@@ -1619,6 +1653,32 @@ export class BpjsService {
                 existingSepData?.dpjp?.kode ??
                 '';
 
+            const diagAwalValue =
+                overrideDiagAwal ??
+                data.diagnosa_awal_reg ??
+                data.diagnosa_awal_kontrol ??
+                rujukanData?.diagnosa?.kode ??
+                '';
+
+            const poliTujuanValue =
+                overridePoli?.tujuan ??
+                data.kode_poli_dummy ??
+                data.poli_bpjs ??
+                rujukanData?.poliRujukan?.kode ??
+                '';
+
+            if (!diagAwalValue) {
+                return {
+                    metaData: { code: 400, message: 'DiagAwal wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
+            if (!poliTujuanValue) {
+                return {
+                    metaData: { code: 400, message: 'Poli tujuan wajib diisi (tidak ditemukan dari SIMRS/BPJS rujukan).' }
+                };
+            }
+
 
 
             const payload = {
@@ -1642,11 +1702,10 @@ export class BpjsService {
                             ppkRujukan: overrideRujukan?.ppkRujukan ?? (ppkRujukan || rujukanData?.provPerujuk?.kode || '')
                         },
                         catatan: overrideCatatan ?? 'SEP Created via SIMRS Integration',
-                        tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || rujukanData?.poliRujukan?.kode || ''),
+                        diagAwal: diagAwalValue,
                         poli: {
-                            tujuan: overridePoli?.tujuan ?? (data.kode_poli_dummy || data.poli_bpjs || ''),
+                            tujuan: poliTujuanValue,
                             eksekutif: overridePoli?.eksekutif ?? (data.poli_eksekutif || '0')
-
                         },
                         cob: {
                             cob: overrideCob?.cob ?? '0'
