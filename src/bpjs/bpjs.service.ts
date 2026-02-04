@@ -333,7 +333,7 @@ export class BpjsService {
     }
 
     async getRujukanByNoKartu(noKartu: string) {
-        return this.makeRequest('vclaim', 'get', `/Rujukan/Peserta/${noKartu}`);
+        return this.makeRequest('vclaim', 'get', `/Rujukan/RS/Peserta/${noKartu}`);
     }
 
     async getRujukanListByNoKartu(noKartu: string) {
