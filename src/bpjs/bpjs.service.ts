@@ -1533,20 +1533,11 @@ export class BpjsService {
                         this.logger.log(`[SEP - SIMRS] Found existing SEP ${refSep}, will use its details.`);
                     }
                 }
-                const needsRujukanFallback =
-                    !data.no_rujukan_reg &&
-                    !data.no_rujukan_dummy &&
-                    !data.no_rujukan_kontrol ||
-                    !data.tgl_rujukan ||
-                    (!data.diagnosa_awal_reg && !data.diagnosa_awal_kontrol) ||
-                    (!data.kode_poli_dummy && !data.poli_bpjs);
-
-                if (needsRujukanFallback) {
-                    const rujukanRes = await this.getRujukanByNoKartu(noKartu);
-                    if (rujukanRes?.metaData?.code === '200' && rujukanRes?.response?.rujukan) {
-                        rujukanData = rujukanRes.response.rujukan;
-                        this.logger.log(`[SEP - SIMRS] Found rujukan for ${noKartu}, will use its details if needed.`);
-                    }
+                // Always try to fetch rujukan from BPJS VClaim to get the most accurate data
+                const rujukanRes = await this.getRujukanByNoKartu(noKartu);
+                if (rujukanRes?.metaData?.code === '200' && rujukanRes?.response?.rujukan) {
+                    rujukanData = rujukanRes.response.rujukan;
+                    this.logger.log(`[SEP - SIMRS] Fetched rujukan for ${noKartu} from BPJS VClaim: ${rujukanData.noKunjungan}`);
                 }
             } catch (e) {
                 this.logger.warn(`[SEP - SIMRS] Failed to fetch supplemental BPJS info: ${e.message} `);
@@ -1629,16 +1620,16 @@ export class BpjsService {
 
             const diagAwalValue =
                 overrideDiagAwal ??
+                rujukanData?.diagnosa?.kode ??
                 data.diagnosa_awal_reg ??
                 data.diagnosa_awal_kontrol ??
-                rujukanData?.diagnosa?.kode ??
                 '';
 
             const poliTujuanValue =
                 overridePoli?.tujuan ??
+                rujukanData?.poliRujukan?.kode ??
                 data.kode_poli_dummy ??
                 data.poli_bpjs ??
-                rujukanData?.poliRujukan?.kode ??
                 '';
 
             if (!diagAwalValue) {
@@ -1671,9 +1662,9 @@ export class BpjsService {
                         noMR: overrideNoMR ?? data.no_mr,
                         rujukan: {
                             asalRujukan: overrideRujukan?.asalRujukan ?? '1',
-                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDateDua(data.tgl_rujukan) || formatDateDua(rujukanData?.tglKunjungan) || tglSep)),
-                            noRujukan: overrideRujukan?.noRujukan ?? (data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || rujukanData?.noKunjungan || ''),
-                            ppkRujukan: overrideRujukan?.ppkRujukan ?? (ppkRujukan || rujukanData?.provPerujuk?.kode || '')
+                            tglRujukan: overrideRujukan?.tglRujukan ?? ((overrideTglRujukan && overrideTglRujukan !== '') ? overrideTglRujukan : (formatDateDua(rujukanData?.tglKunjungan) || formatDateDua(data.tgl_rujukan) || tglSep)),
+                            noRujukan: overrideRujukan?.noRujukan ?? (rujukanData?.noKunjungan || data.no_rujukan_reg || data.no_rujukan_dummy || data.no_rujukan_kontrol || ''),
+                            ppkRujukan: overrideRujukan?.ppkRujukan ?? (rujukanData?.provPerujuk?.kode || ppkRujukan || '')
                         },
                         catatan: overrideCatatan ?? 'SEP Created via SIMRS Integration',
                         diagAwal: diagAwalValue,
