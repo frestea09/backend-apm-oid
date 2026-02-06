@@ -1741,4 +1741,309 @@ export class BpjsService {
             await queryRunner.release();
         }
     }
+
+    async getCheckinSepKontrolData(id: number) {
+        try {
+            const regdum = await this.registrasisRepository.findOne({ where: { id } });
+            if (!regdum) {
+                return { metaData: { code: 404, message: 'Data Reservasi tidak ditemukan' } };
+            }
+
+            // 1. Get Surat Kontrol (SKDP)
+            const skdpRes = await this.getSuratKontrol(regdum.no_rujukan);
+            if (skdpRes?.metaData?.code !== '200' && skdpRes?.metaData?.code !== 200) {
+                return { metaData: { code: 201, message: skdpRes?.metaData?.message || 'Data Surat Kontrol Tidak Ditemukan' } };
+            }
+
+            const dataSkdp = skdpRes.response;
+            const noRujukanAwal = dataSkdp?.sep?.provPerujuk?.noRujukan;
+
+            // 2. Get Rujukan from SKDP
+            let rujukanRes = null;
+            if (noRujukanAwal) {
+                rujukanRes = await this.getRujukanByNoRujukan(noRujukanAwal);
+            }
+
+            // 3. Get Poli Data
+            const poli = await this.polisRepository.findOne({ where: { bpjs: regdum.kode_poli } });
+
+            // 4. Get Dokter HFIS
+            let dokterHfis = [];
+            if (poli?.bpjs) {
+                const hfisRes = await this.getJadwalDokter(poli.bpjs, new Date().toISOString().split('T')[0]);
+                if (hfisRes?.metadata?.code === 200) {
+                    dokterHfis = hfisRes.response;
+                }
+            }
+
+            return {
+                metaData: { code: 200, message: 'OK' },
+                response: {
+                    regdum,
+                    dataSkdp,
+                    rujukan: rujukanRes?.response || null,
+                    poli,
+                    dokterHfis
+                }
+            };
+        } catch (error) {
+            this.logger.error(`[getCheckinSepKontrolData] Error: ${error.message}`, error.stack);
+            return { metaData: { code: 500, message: `Internal Error: ${error.message}` } };
+        }
+    }
+
+    async processStoreCheckinSep(body: any) {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const { id_reg_dum, dokter_id } = body;
+            const dokterParts = dokter_id.split('_'); // [kode_bpjs, nama, jam, poli_bpjs]
+            const kodeBpjsDokter = dokterParts[0];
+            const today = new Date().toISOString().split('T')[0];
+
+            // 1. Get/Verify RegistrasiDummy
+            const regDummy = await queryRunner.manager.findOne(RegistrasisDummy, {
+                where: { id: id_reg_dum, tglperiksa: today }
+            });
+
+            if (!regDummy) {
+                await queryRunner.rollbackTransaction();
+                return { metaData: { code: 201, message: 'Maaf, Tidak dapat checkin, cek tanggal periksa' } };
+            }
+
+            // 2. Get Poli and Generate Queue
+            const poli = await queryRunner.manager.findOne(Poli, { where: { bpjs: regDummy.kode_poli } });
+            if (!poli) {
+                await queryRunner.rollbackTransaction();
+                return { metaData: { code: 201, message: 'Poli tidak ditemukan' } };
+            }
+
+            const antrianCount = await queryRunner.manager.count(AntrianPoli, {
+                where: { tanggal: today, kelompok: poli.kelompok }
+            });
+            const nomorAntrian = antrianCount + 1;
+
+            const antrian = queryRunner.manager.create(AntrianPoli, {
+                nomor: nomorAntrian,
+                suara: `${nomorAntrian}.mp3`,
+                status: 0,
+                panggil: 1,
+                poli_id: poli.id,
+                tanggal: today,
+                loket: poli.loket,
+                kelompok: poli.kelompok,
+            });
+            const savedAntrian = await queryRunner.manager.save(antrian);
+
+            // 3. Patient Logic (Find or Create)
+            let pasien = await queryRunner.manager.findOne(Pasien, { where: { no_rm: regDummy.no_rm } });
+            if (!pasien) {
+                pasien = queryRunner.manager.create(Pasien, {
+                    nama: (body.nama || regDummy.nama)?.toUpperCase(),
+                    nik: body.nik || regDummy.nik,
+                    tgllahir: body.tanggallahir || regDummy.tgllahir,
+                    kelamin: body.jeniskelamin || regDummy.kelamin,
+                    alamat: (body.alamat || regDummy.alamat)?.toUpperCase(),
+                    tgldaftar: today,
+                    nohp: body.nohp || regDummy.no_hp,
+                    negara: 'Indonesia',
+                    no_jkn: body.nomorkartu || regDummy.nomorkartu,
+                    user_create: 'APM-NEST',
+                });
+                pasien = await queryRunner.manager.save(pasien);
+
+                // Create Nomor RM
+                const rmCount = await queryRunner.manager.count(Nomorrm);
+                const rms = queryRunner.manager.create(Nomorrm, {
+                    pasien_id: pasien.id,
+                    no_rm: (rmCount + 769695).toString()
+                });
+                const savedRms = await queryRunner.manager.save(rms);
+                pasien.no_rm = savedRms.no_rm;
+                await queryRunner.manager.save(pasien);
+            }
+
+            // 4. Create Registrasi
+            const regCount = await queryRunner.manager.count(Registrasi, {
+                where: { reg_id: Like(`${today.replace(/-/g, '')}%`) }
+            });
+
+            const dokter = await queryRunner.manager.findOne(Pegawai, { where: { kode_bpjs: kodeBpjsDokter } });
+            if (!dokter) {
+                await queryRunner.rollbackTransaction();
+                return { metaData: { code: 201, message: 'Maaf, dokter tidak tersedia di database lokal' } };
+            }
+
+            const registrasi = queryRunner.manager.create(Registrasi, {
+                input_from: 'APM',
+                antrian_poli_id: savedAntrian.id,
+                nomorantrian: regDummy.kodebooking,
+                nomorantrian_jkn: regDummy.nomorantrian,
+                pasien_id: pasien.id,
+                reg_id: today.replace(/-/g, '') + String(regCount + 1).padStart(4, '0'),
+                status: 1,
+                dokter_id: dokter.id,
+                poli_id: poli.id,
+                bayar: '1',
+                no_jkn: pasien.no_jkn,
+                no_rujukan: body.no_rujukan || regDummy.no_rujukan,
+                jenis_pasien: '1',
+                posisiberkas_id: '2',
+                status_reg: 'J1',
+            });
+            const savedReg = await queryRunner.manager.save(registrasi);
+
+            // 5. History Logs
+            await queryRunner.manager.save(HistoriStatus, {
+                registrasi_id: savedReg.id,
+                status: 'J1',
+                poli_id: savedReg.poli_id,
+                pengirim_rujukan: 1,
+            });
+
+            await queryRunner.manager.save(Historipengunjung, {
+                registrasi_id: savedReg.id,
+                pasien_id: pasien.id,
+                pengirim_rujukan: 1,
+                politipe: 'J',
+                status_pasien: 'LAMA',
+            });
+
+            await queryRunner.manager.save(HistorikunjunganIRJ, {
+                registrasi_id: savedReg.id,
+                pasien_id: pasien.id,
+                poli_id: poli.id,
+                dokter_id: savedReg.dokter_id,
+                pengirim_rujukan: '1',
+            });
+
+            // 6. Update Dummy
+            regDummy.status = 'checkin';
+            regDummy.no_rm = pasien.no_rm;
+            regDummy.registrasi_id = savedReg.id;
+            await queryRunner.manager.save(regDummy);
+
+            // 7. BPJS VClaim Insert
+            const vclaimPayload = {
+                request: {
+                    t_sep: {
+                        noKartu: body.nomorkartu,
+                        tglSep: today,
+                        ppkPelayanan: this.configService.get('VCLAIM_PPK_LAYANAN') || '1002R006',
+                        jnsPelayanan: '2',
+                        klsRawat: {
+                            klsRawatHak: body.hak_kelas_inap,
+                            klsRawatNaik: '',
+                            pembiayaan: '',
+                            penanggungJawab: '',
+                        },
+                        noMR: pasien.no_rm,
+                        rujukan: {
+                            asalRujukan: body.asalRujukan,
+                            tglRujukan: body.tgl_rujukan,
+                            noRujukan: body.no_rujukan,
+                            ppkRujukan: body.ppk_rujukan,
+                        },
+                        catatan: '',
+                        diagAwal: body.diagnosa_awal,
+                        poli: {
+                            tujuan: body.poli_bpjs,
+                            eksekutif: '0',
+                        },
+                        cob: { cob: '0' },
+                        katarak: { katarak: body.katarak || '0' },
+                        jaminan: {
+                            lakaLantas: '0',
+                            penjamin: {
+                                penjamin: '',
+                                tglKejadian: '',
+                                keterangan: '',
+                                suplesi: {
+                                    suplesi: '0',
+                                    noSepSuplesi: '',
+                                    lokasiLaka: { kdPropinsi: '', kdKabupaten: '', kdKecamatan: '' }
+                                }
+                            }
+                        },
+                        tujuanKunj: body.tujuanKunj || '0',
+                        flagProcedure: body.flagProcedure || '',
+                        kdPenunjang: body.kdPenunjang || '',
+                        assesmentPel: body.assesmentPel || '',
+                        skdp: {
+                            noSurat: body.noSurat || '',
+                            kodeDPJP: body.type_sep !== 'sep_baru' ? dokter.kode_bpjs : '',
+                        },
+                        dpjpLayan: dokter.kode_bpjs,
+                        noTelp: body.nohp,
+                        user: 'APM-NEST'
+                    }
+                }
+            };
+
+            const vclaimRes = await this.insertSepV2(vclaimPayload);
+            if (vclaimRes?.metaData?.code === 200 || vclaimRes?.metaData?.code === '200') {
+                const sepData = vclaimRes.response?.sep;
+                savedReg.no_sep = sepData?.noSep;
+                savedReg.tgl_sep = today;
+                await queryRunner.manager.save(savedReg);
+
+                // 8. BPJS Antrean Add
+                const antreanPayload = {
+                    kodebooking: regDummy.kodebooking,
+                    jenispasien: 'JKN',
+                    nomorkartu: body.nomorkartu,
+                    nik: body.nik,
+                    nohp: body.nohp,
+                    kodepoli: poli.bpjs,
+                    namapoli: poli.nama,
+                    pasienbaru: 0,
+                    norm: pasien.no_rm,
+                    tanggalperiksa: today,
+                    kodedokter: dokter.kode_bpjs,
+                    namadokter: dokter.nama,
+                    jampraktek: dokterParts[2] || '08:00-14:00',
+                    jeniskunjungan: body.jenisKunjungan || '1',
+                    nomorreferensi: body.noSurat || body.no_rujukan,
+                    nomorantrean: `${poli.bpjs}${nomorAntrian}`,
+                    angkaantrean: nomorAntrian,
+                    estimasidilayani: Date.now() + 900000,
+                    sisakuotajkn: 10,
+                    kuotajkn: 20,
+                    sisakuotanonjkn: 10,
+                    kuotanonjkn: 20,
+                    keterangan: '-'
+                };
+                await this.addAntrean(antreanPayload);
+
+                // 9. BPJS Antrean Update Waktu (Task 3)
+                await this.updateWaktuAntrean({
+                    kodebooking: regDummy.kodebooking,
+                    taskid: 3,
+                    waktu: Date.now()
+                });
+            } else {
+                await queryRunner.rollbackTransaction();
+                return { metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` } };
+            }
+
+            await queryRunner.commitTransaction();
+            return {
+                metaData: { code: 200, message: 'Berhasil Checkin' },
+                response: {
+                    registrasi_id: savedReg.id,
+                    no_rm: pasien.no_rm,
+                    no_sep: savedReg.no_sep
+                }
+            };
+
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            this.logger.error(`[processStoreCheckinSep] Error: ${error.message}`, error.stack);
+            return { metaData: { code: 500, message: `Internal Error: ${error.message}` } };
+        } finally {
+            await queryRunner.release();
+        }
+    }
 }

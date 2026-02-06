@@ -788,4 +788,21 @@ export class BpjsController {
     async createSepFromSimrs(@Param('identifier') identifier: string, @Body() body: any) {
         return await this.bpjsService.createSepFromSimrs(identifier, body);
     }
+
+    @ApiTags('VClaim')
+    @Get('vclaim/reservasi/sep-kontrol/:id')
+    @ApiOperation({ summary: 'Data persiapan check-in SEP Kontrol' })
+    @ApiParam({ name: 'id', description: 'ID Registrasi Dummy' })
+    @ApiResponse({ status: 200, description: 'Success' })
+    async getCheckinSepKontrolData(@Param('id') id: string) {
+        return await this.bpjsService.getCheckinSepKontrolData(parseInt(id));
+    }
+
+    @ApiTags('VClaim')
+    @Post('vclaim/reservasi/store-cekin-sep')
+    @ApiOperation({ summary: 'Proses check-in SEP dan update ke BPJS' })
+    @ApiResponse({ status: 200, description: 'Success' })
+    async processStoreCheckinSep(@Body() body: any) {
+        return await this.bpjsService.processStoreCheckinSep(body);
+    }
 }
