@@ -801,6 +801,31 @@ export class BpjsController {
     @ApiTags('VClaim')
     @Post('vclaim/reservasi/store-cekin-sep')
     @ApiOperation({ summary: 'Proses check-in SEP dan update ke BPJS' })
+    @ApiBody({
+        schema: {
+            example: {
+                id_reg_dum: 123,
+                dokter_id: '12345_Dr. Nama Dokter_08:00-14:00_ANA',
+                nomorkartu: '0001234567890',
+                nik: '3201234567890123',
+                nama: 'NAMA PASIEN',
+                tanggallahir: '1990-01-01',
+                jeniskelamin: 'L',
+                alamat: 'ALAMAT PASIEN',
+                nohp: '081234567890',
+                no_rujukan: '0114U1630316Y000003',
+                tgl_rujukan: '2024-01-15',
+                ppk_rujukan: '0301R001',
+                asalRujukan: '1',
+                hak_kelas_inap: '3',
+                diagnosa_awal: 'A09',
+                poli_bpjs: 'ANA',
+                noSurat: '0301R0110721K000021',
+                type_sep: 'sep_kontrol',
+                jenisKunjungan: '3'
+            }
+        }
+    })
     @ApiResponse({ status: 200, description: 'Success' })
     async processStoreCheckinSep(@Body() body: any) {
         return await this.bpjsService.processStoreCheckinSep(body);
