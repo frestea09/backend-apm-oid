@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('antrian_polis')
+@Entity('antrian_poli')
 export class AntrianPoli {
     @PrimaryGeneratedColumn()
     id: number;

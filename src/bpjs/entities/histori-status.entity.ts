@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity('histori_statuses')
+@Entity('histori_status')
 export class HistoriStatus {
     @PrimaryGeneratedColumn()
     id: number;
