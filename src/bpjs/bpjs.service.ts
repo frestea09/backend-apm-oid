@@ -1759,7 +1759,7 @@ export class BpjsService {
             const noRujukanAwal = dataSkdp?.sep?.provPerujuk?.noRujukan;
 
             // 2. Get Rujukan from SKDP
-            let rujukanRes = null;
+            let rujukanRes: any = null;
             if (noRujukanAwal) {
                 rujukanRes = await this.getRujukanByNoRujukan(noRujukanAwal);
             }
@@ -1841,11 +1841,11 @@ export class BpjsService {
             let pasien = await queryRunner.manager.findOne(Pasien, { where: { no_rm: regDummy.no_rm } });
             if (!pasien) {
                 pasien = queryRunner.manager.create(Pasien, {
-                    nama: (body.nama || regDummy.nama)?.toUpperCase(),
+                    nama: (body.nama)?.toUpperCase(),
                     nik: body.nik || regDummy.nik,
-                    tgllahir: body.tanggallahir || regDummy.tgllahir,
-                    kelamin: body.jeniskelamin || regDummy.kelamin,
-                    alamat: (body.alamat || regDummy.alamat)?.toUpperCase(),
+                    tgllahir: body.tanggallahir,
+                    kelamin: body.jeniskelamin,
+                    alamat: (body.alamat)?.toUpperCase(),
                     tgldaftar: today,
                     nohp: body.nohp || regDummy.no_hp,
                     negara: 'Indonesia',
