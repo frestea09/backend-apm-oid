@@ -2026,6 +2026,7 @@ export class BpjsService {
             } else {
                 await queryRunner.rollbackTransaction();
                 return {
+                    data: { vclaimPayload },
                     metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` }
                 };
             }
