@@ -1967,13 +1967,13 @@ export class BpjsService {
                                 }
                             }
                         },
-                        tujuanKunj: body.tujuanKunj || '0',
+                        tujuanKunj: body.tujuanKunj !== undefined ? body.tujuanKunj : '0',
                         flagProcedure: body.flagProcedure || '',
                         kdPenunjang: body.kdPenunjang || '',
                         assesmentPel: body.assesmentPel || '',
                         skdp: {
                             noSurat: body.noSurat || '',
-                            kodeDPJP: body.type_sep !== 'sep_baru' ? dokter.kode_bpjs : '',
+                            kodeDPJP: (body.noSurat && body.type_sep !== 'sep_baru') ? (body.kodeDPJP || dokter.kode_bpjs) : '',
                         },
                         dpjpLayan: dokter.kode_bpjs,
                         noTelp: body.nohp,
@@ -2025,7 +2025,14 @@ export class BpjsService {
                 });
             } else {
                 await queryRunner.rollbackTransaction();
-                return { metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` } };
+                return {
+                    metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` },
+                    _debug: {
+                        vclaimPayload,
+                        vclaimResponse: vclaimRes,
+                        originalBody: body
+                    }
+                };
             }
 
             await queryRunner.commitTransaction();
@@ -2035,6 +2042,10 @@ export class BpjsService {
                     registrasi_id: savedReg.id,
                     no_rm: pasien.no_rm,
                     no_sep: savedReg.no_sep
+                },
+                _debug: {
+                    vclaimPayload,
+                    vclaimResponse: vclaimRes
                 }
             };
 
