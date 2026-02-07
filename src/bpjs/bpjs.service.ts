@@ -1926,6 +1926,18 @@ export class BpjsService {
             await queryRunner.manager.save(regDummy);
 
             // 7. BPJS VClaim Insert
+            let tujuanKunjVal = body.tujuanKunj !== undefined ? body.tujuanKunj : '0';
+            let flagProcedureVal = body.flagProcedure || '';
+            let kdPenunjangVal = body.kdPenunjang || '';
+            let assesmentPelVal = body.assesmentPel || '';
+
+            if (body.noSurat && body.noSurat.toLowerCase().includes('k')) {
+                tujuanKunjVal = '2';
+                flagProcedureVal = '';
+                kdPenunjangVal = '';
+                assesmentPelVal = '5';
+            }
+
             const vclaimPayload = {
                 request: {
                     t_sep: {
@@ -1967,10 +1979,10 @@ export class BpjsService {
                                 }
                             }
                         },
-                        tujuanKunj: body.tujuanKunj !== undefined ? body.tujuanKunj : '0',
-                        flagProcedure: body.flagProcedure || '',
-                        kdPenunjang: body.kdPenunjang || '',
-                        assesmentPel: body.assesmentPel || '',
+                        tujuanKunj: tujuanKunjVal,
+                        flagProcedure: flagProcedureVal,
+                        kdPenunjang: kdPenunjangVal,
+                        assesmentPel: assesmentPelVal,
                         skdp: {
                             noSurat: body.noSurat || '',
                             kodeDPJP: (body.noSurat && body.type_sep !== 'sep_baru') ? (body.kodeDPJP || dokter.kode_bpjs) : '',
