@@ -1994,7 +1994,31 @@ export class BpjsService {
                 }
             };
             console.log(vclaimPayload)
-            const vclaimRes = await this.insertSepV2(vclaimPayload);
+            let vclaimRes = await this.insertSepV2(vclaimPayload);
+
+            // Retry logic: jika gagal 201 dan initial params adalah tujuanKunj="2", assesmentPel="5"
+            // ulangi dengan tujuanKunj="0", assesmentPel=""
+            if (
+                (vclaimRes?.metaData?.code === 201 || vclaimRes?.metaData?.code === '201') &&
+                tujuanKunjVal === '2' &&
+                assesmentPelVal === '5'
+            ) {
+                this.logger.log(`[processStoreCheckinSep] SEP Check-in failed with 201. Retrying with default parameters (tujuanKunj: 0, assesmentPel: '')`);
+
+                tujuanKunjVal = '0';
+                assesmentPelVal = '';
+
+                // Update payload and retry
+                vclaimPayload.request.t_sep.tujuanKunj = tujuanKunjVal;
+                vclaimPayload.request.t_sep.assesmentPel = assesmentPelVal;
+
+                // Clean up SKDP if retrying with purpose 0
+                vclaimPayload.request.t_sep.skdp.noSurat = '';
+                vclaimPayload.request.t_sep.skdp.kodeDPJP = '';
+
+                vclaimRes = await this.insertSepV2(vclaimPayload);
+            }
+
             if (vclaimRes?.metaData?.code === 200 || vclaimRes?.metaData?.code === '200') {
                 const sepData = vclaimRes.response?.sep;
                 savedReg.no_sep = sepData?.noSep;
