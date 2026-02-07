@@ -1981,7 +1981,7 @@ export class BpjsService {
                     }
                 }
             };
-
+            console.log(vclaimPayload)
             const vclaimRes = await this.insertSepV2(vclaimPayload);
             if (vclaimRes?.metaData?.code === 200 || vclaimRes?.metaData?.code === '200') {
                 const sepData = vclaimRes.response?.sep;
