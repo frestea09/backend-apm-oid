@@ -2026,12 +2026,7 @@ export class BpjsService {
             } else {
                 await queryRunner.rollbackTransaction();
                 return {
-                    metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` },
-                    _debug: {
-                        vclaimPayload,
-                        vclaimResponse: vclaimRes,
-                        originalBody: body
-                    }
+                    metaData: { code: 201, message: `Gagal membuat SEP: ${vclaimRes?.metaData?.message}` }
                 };
             }
 
@@ -2042,10 +2037,6 @@ export class BpjsService {
                     registrasi_id: savedReg.id,
                     no_rm: pasien.no_rm,
                     no_sep: savedReg.no_sep
-                },
-                _debug: {
-                    vclaimPayload,
-                    vclaimResponse: vclaimRes
                 }
             };
 
